@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertCircle, Bookmark, CheckCircle2, Compass, FolderClosed, KeyRound, Plus, Settings } from 'lucide-react';
@@ -20,19 +20,7 @@ function isActive(pathname: string, to: string) {
 }
 
 export function Logo() {
-  const gid = `lg-${useId().replace(/:/g, '')}`;
-  return (
-    <svg className="brand-logo" viewBox="0 0 64 64" aria-hidden>
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3395FF" />
-          <stop offset="1" stopColor="#0058BC" />
-        </linearGradient>
-      </defs>
-      <rect width="64" height="64" rx="15" fill={`url(#${gid})`} />
-      <path d="M22 16h20a3 3 0 0 1 3 3v29l-13-8-13 8V19a3 3 0 0 1 3-3z" fill="#fff" />
-    </svg>
-  );
+  return <img className="brand-logo" src="/logo-192.png" srcSet="/logo-192.png 1x, /logo-512.png 3x" alt="" width={34} height={34} draggable={false} />;
 }
 
 export function Brand({ sub, className = '' }: { sub?: string; className?: string }) {
