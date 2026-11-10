@@ -1,0 +1,10 @@
+{
+  "name": "Curadoria",
+  "short_name": "Curadoria",
+  "description": "Minhas listas de links organizadas",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F2F2F7",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
