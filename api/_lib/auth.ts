@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { getDB } from './db.js';
+import { ConfigError, getDB } from './db.js';
 
 /**
  * Login com e-mail e senha
@@ -107,7 +107,7 @@ export async function login(emailRaw: string, password: string): Promise<{ token
   const email = String(emailRaw ?? '').trim().toLowerCase();
   const db = getDB();
   if (accounts().length === 0) {
-    throw new AuthError('Nenhuma conta configurada. Defina LOGIN_USERS no painel da Vercel.', 500);
+    throw new ConfigError('LOGIN_USERS não definida (ou em formato inválido) nas variáveis de ambiente da Vercel.');
   }
   const attempts = await db.hit(`login:${email}`, 15 * 60);
   if (attempts > 8) throw new AuthError('Muitas tentativas. Espere 15 minutos e tente de novo.', 429);

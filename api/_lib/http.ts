@@ -33,10 +33,14 @@ export function route(fn: Handler, opts: { public?: boolean } = {}) {
     } catch (e) {
       if (e instanceof AuthError) return json({ error: e.message }, e.status);
       if (e instanceof BadRequest) return json({ error: e.message }, 400);
-      if (e instanceof ConfigError) return json({ error: e.message }, 500);
+      if (e instanceof ConfigError) {
+        // detalhe técnico só nos Logs da Vercel; o visitante vê uma mensagem neutra
+        console.error('[configuração]', e.message);
+        return json({ error: 'Serviço indisponível no momento. Tente de novo em instantes.' }, 503);
+      }
       if (e instanceof SyntaxError) return json({ error: 'JSON inválido' }, 400);
       console.error(e);
-      return json({ error: 'Erro no servidor' }, 500);
+      return json({ error: 'Algo deu errado. Tente de novo em instantes.' }, 500);
     }
   };
 }

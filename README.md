@@ -73,6 +73,8 @@ No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/se
 
 **Backup:** Ajustes → *Baixar backup (.json)*. Para voltar uma cópia: *Restaurar backup*, que substitui a biblioteca inteira para todos.
 
+**Se o site mostrar "Serviço indisponível":** falta alguma configuração (banco ou `LOGIN_USERS`) ou o Redeploy. Por segurança o site não mostra o motivo para quem está usando: veja em **Vercel → Logs**, nas linhas que começam com `[configuração]`.
+
 **Segurança do login:**
 - Senhas trocadas no app são guardadas com hash (scrypt), nunca em texto.
 - Depois de 8 tentativas erradas, o e-mail fica bloqueado por 15 minutos.

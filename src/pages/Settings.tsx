@@ -227,7 +227,7 @@ export function Settings() {
         </div>
 
         <p className="footer-note">
-          {APP_NAME} · hospedado grátis no GitHub + Vercel
+          {APP_NAME}
           <br />
           Atalho: pressione <b>/</b> para buscar
         </p>
