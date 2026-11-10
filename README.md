@@ -1,7 +1,7 @@
 # Link Founder 🔖
 
 Diretório de links **compartilhado** organizado em coleções (filtros), com busca, marcadores, favoritos e ordenação.
-**Qualquer pessoa com o link pode ver** e navegar pelos links; **só quem tem o código de acesso** cria, edita e apaga links e categorias.
+**Qualquer pessoa com o link pode ver** e navegar pelos links; **só quem tem conta** (login com e-mail e senha) cria, edita e apaga links e categorias.
 Visual Apple HIG: branco, azul e cinza-claro, glassmorphism e animações. Pensado primeiro para o celular.
 
 **Stack (tudo grátis):**
@@ -29,22 +29,26 @@ Em [vercel.com/new](https://vercel.com/new), entre com o GitHub, importe o repos
 No projeto na Vercel: **Storage → Create Database → Upstash for Redis** → plano **Free** → **Connect** ao projeto.
 A Vercel cria sozinha as variáveis de conexão (`KV_REST_API_URL` / `KV_REST_API_TOKEN` ou `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`; o app aceita os dois nomes).
 
-### 4. Código de acesso
+### 4. Contas de login
 **Settings → Environment Variables** → adicione:
 
 | Nome | Valor |
 | --- | --- |
-| `ACCESS_CODE` | uma frase que só vocês dois saibam, ex.: `girassol-azul-2026` |
+| `LOGIN_USERS` | `Gui:seu-email@gmail.com:senha-inicial-do-gui;Ana:email-da-ana@gmail.com:senha-inicial-da-ana` |
 
-Use algo comprido: é ele que impede outras pessoas de editar.
+Formato: `nome:e-mail:senha`, com as contas separadas por **ponto e vírgula**. A senha não pode ter `;`.
+Essa é só a **senha inicial**: depois de entrar, cada um troca a sua em **Ajustes → Alterar senha** (a nova fica guardada com criptografia no banco).
+Para adicionar ou remover alguém, edite essa variável e faça Redeploy.
 
 ### 5. Publicar de novo
 **Deployments → ⋯ → Redeploy**. Pronto!
 
 ### 6. Nos celulares de vocês
-Abra o site → **Ajustes → Entrar para editar** → digite **seu nome** e o **código**. Ele fica salvo, então só é preciso digitar uma vez.
-Visitantes não veem botões de adicionar, editar ou apagar, e o servidor recusa qualquer alteração sem o código.
+Abra o site → **Ajustes → Entrar** → e-mail e senha. Vocês continuam conectados no aparelho até sair (sessão de 180 dias).
+Depois, troque a senha inicial em **Ajustes → Alterar senha**.
 Dica: no Safari use **Compartilhar → Adicionar à Tela de Início** (no Android, menu **⋮ → Instalar app**). O Link Founder abre como um app.
+
+Visitantes não veem botões de adicionar, editar ou apagar, e o servidor recusa qualquer alteração sem login.
 
 No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/seed.ts`. Edite ou apague à vontade pelo próprio site.
 
@@ -52,7 +56,7 @@ No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/se
 
 ## Como funciona o compartilhamento
 
-| | Visitante (só o link) | Vocês (com o código) |
+| | Visitante (só o link) | Vocês (logados) |
 | --- | --- | --- |
 | Ver, buscar, filtrar e abrir links | ✅ | ✅ |
 | Copiar e compartilhar links | ✅ | ✅ |
@@ -69,7 +73,11 @@ No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/se
 
 **Backup:** Ajustes → *Baixar backup (.json)*. Para voltar uma cópia: *Restaurar backup*, que substitui a biblioteca inteira para todos.
 
-**Trocar o código:** mude `ACCESS_CODE` na Vercel e faça Redeploy. Os aparelhos de vocês saem do modo edição e pedem o código novo.
+**Segurança do login:**
+- Senhas trocadas no app são guardadas com hash (scrypt), nunca em texto.
+- Depois de 8 tentativas erradas, o e-mail fica bloqueado por 15 minutos.
+- Trocar a senha desconecta os outros aparelhos daquela conta.
+- Esqueceu a senha? Na Vercel, abra **Storage → (seu banco) → Open in Upstash → Data Browser** e apague a chave `linkfounder:auth:pw:<seu e-mail>`. A senha inicial de `LOGIN_USERS` volta a valer.
 
 ## Criar um novo "tipo de filtro"
 
@@ -88,17 +96,18 @@ npm install
 npm run dev        # http://localhost:5173 — a API roda junto, com dados em memória
 ```
 
-Sem `ACCESS_CODE`, todo mundo edita localmente. Para testar o modo visitante: `ACCESS_CODE=teste npm run dev`.
+Sem `LOGIN_USERS`, todo mundo edita localmente. Para testar o login: `LOGIN_USERS='Teste:teste@teste.com:12345678' npm run dev`.
 Para usar o banco real: `npx vercel link && npx vercel env pull` e depois `npx vercel dev`.
 
 ## Estrutura
 
 ```
 api/                     ← Vercel Functions (rodam no servidor)
+  auth.ts                ← login, sessão e troca de senha
   library.ts             ← GET biblioteca (público) · PUT restaurar backup
   links.ts               ← POST salvar link · DELETE apagar
   collections.ts         ← POST salvar coleção · DELETE apagar (com seus links)
-  _lib/                  ← banco (Redis/memória), código de acesso, validação, dados iniciais
+  _lib/                  ← banco (Redis/memória), login, validação, dados iniciais
 src/
   lib/store.tsx          ← estado do app, sincronização e edição otimista
   components/  pages/    ← interface

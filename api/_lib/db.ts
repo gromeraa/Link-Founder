@@ -15,6 +15,13 @@ export interface DB {
   upsertCollection(c: Collection): Promise<number>;
   deleteCollection(id: string): Promise<number>;
   replace(lib: Library): Promise<number>;
+  getLink(id: string): Promise<LinkItem | null>;
+  /** Pequeno armazenamento chave/valor para o login (senhas trocadas no app). */
+  kvGet(key: string): Promise<string | null>;
+  kvSet(key: string, value: string): Promise<void>;
+  /** Conta tentativas dentro de uma janela de tempo (proteção contra força bruta). */
+  hit(key: string, ttlSeconds: number): Promise<number>;
+  clearHits(key: string): Promise<void>;
 }
 
 const K = {
@@ -22,6 +29,7 @@ const K = {
   cols: 'linkfounder:collections',
   ver: 'linkfounder:version',
   seeded: 'linkfounder:seeded',
+  kv: 'linkfounder:auth:',
 };
 
 const byOrder = (a: Collection, b: Collection) => (a.order ?? 0) - (b.order ?? 0);
@@ -98,6 +106,25 @@ class RedisDB implements DB {
     const res = await p.exec();
     return Number(res[res.length - 1]);
   }
+
+  async getLink(id: string) {
+    return (await this.r.hget<LinkItem>(K.links, id)) ?? null;
+  }
+  async kvGet(key: string) {
+    const v = await this.r.get<string>(K.kv + key);
+    return v === null || v === undefined ? null : String(v);
+  }
+  async kvSet(key: string, value: string) {
+    await this.r.set(K.kv + key, value);
+  }
+  async hit(key: string, ttl: number) {
+    const n = await this.r.incr(K.kv + 'hits:' + key);
+    if (n === 1) await this.r.expire(K.kv + 'hits:' + key, ttl);
+    return n;
+  }
+  async clearHits(key: string) {
+    await this.r.del(K.kv + 'hits:' + key);
+  }
 }
 
 class MemoryDB implements DB {
@@ -130,6 +157,19 @@ class MemoryDB implements DB {
     this.links = new Map(lib.links.map((l) => [l.id, l]));
     return ++this.ver;
   }
+  kv = new Map<string, string>();
+  hits = new Map<string, { n: number; until: number }>();
+  async getLink(id: string) { return this.links.get(id) ?? null; }
+  async kvGet(key: string) { return this.kv.get(key) ?? null; }
+  async kvSet(key: string, value: string) { this.kv.set(key, value); }
+  async hit(key: string, ttl: number) {
+    const now = Date.now();
+    const h = this.hits.get(key);
+    const next = h && h.until > now ? { n: h.n + 1, until: h.until } : { n: 1, until: now + ttl * 1000 };
+    this.hits.set(key, next);
+    return next.n;
+  }
+  async clearHits(key: string) { this.hits.delete(key); }
 }
 
 export class ConfigError extends Error {}

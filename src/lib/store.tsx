@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, ApiError, setAccessCode } from './api';
+import { api, ApiError, setToken, type User } from './api';
 import { STORAGE_PREFIX } from './config';
 import type { Collection, Library, LinkItem, SortMode, ThemeMode } from './types';
 
@@ -7,14 +7,14 @@ import type { Collection, Library, LinkItem, SortMode, ThemeMode } from './types
  * Como os dados funcionam
  * -----------------------
  * Os links ficam num banco (Upstash Redis) acessado pela API em /api, hospedada na Vercel.
- * Qualquer pessoa com o link vê a biblioteca; só quem tem o código de acesso edita.
+ * Qualquer pessoa com o link vê a biblioteca; só quem entra com e-mail e senha edita.
  * Cada aparelho guarda uma cópia (cache) para abrir instantaneamente, e confere novidades
  * a cada 30 s e sempre que o app volta para a tela.
  */
 
 const KEY = {
-  code: `${STORAGE_PREFIX}:code`,
-  name: `${STORAGE_PREFIX}:name`,
+  token: `${STORAGE_PREFIX}:token`,
+  user: `${STORAGE_PREFIX}:user`,
   prefs: `${STORAGE_PREFIX}:prefs`,
   cache: `${STORAGE_PREFIX}:cache`,
 };
@@ -52,15 +52,15 @@ interface Store {
   collections: Collection[];
   links: LinkItem[];
   prefs: Prefs;
-  userName: string;
+  user: User | null;
   syncing: boolean;
   lastSync: number | null;
   syncError: string | null;
   clearSyncError: () => void;
   refresh: () => Promise<void>;
-  login: (code: string, name: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  changePassword: (current: string, next: string) => Promise<void>;
   logout: () => void;
-  setUserName: (name: string) => void;
   collectionById: (id: string) => Collection | undefined;
   countFor: (collectionId: string) => number;
   saveLink: (link: LinkItem) => void;
@@ -77,15 +77,15 @@ const Ctx = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const cached = read<{ lib: Library; version: number } | null>(KEY.cache, null);
-  const savedCode = read<string>(KEY.code, '');
-  if (savedCode) setAccessCode(savedCode);
+  const savedToken = read<string>(KEY.token, '');
+  if (savedToken) setToken(savedToken);
 
   const [lib, setLib] = useState<Library>(cached?.lib ?? EMPTY);
   const [status, setStatus] = useState<Status>(cached ? 'ready' : 'loading');
-  const [canEdit, setCanEdit] = useState(!!savedCode);
+  const [canEdit, setCanEdit] = useState(!!savedToken);
   const [bootError, setBootError] = useState('');
   const [prefs, setPrefsState] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...read(KEY.prefs, {}) }));
-  const [userName, setUserNameState] = useState(() => read(KEY.name, ''));
+  const [user, setUser] = useState<User | null>(() => (savedToken ? read<User | null>(KEY.user, null) : null));
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -103,10 +103,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     write(KEY.cache, { lib: next, version: version.current });
   }, []);
 
-  /** Volta a ser só visitante (código apagado deste aparelho). */
+  /** Volta a ser só visitante (sessão apagada deste aparelho). */
   const lock = useCallback(() => {
-    setAccessCode('');
-    write(KEY.code, undefined);
+    setToken('');
+    write(KEY.token, undefined);
+    write(KEY.user, undefined);
+    setUser(null);
     setCanEdit(false);
   }, []);
 
@@ -118,10 +120,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const res = await api.library(version.current || undefined);
       if (pendingWrites.current > 0) return;
       if (!('unchanged' in res)) commit({ collections: res.collections, links: res.links }, res.version);
-      if (!res.canEdit && read(KEY.code, '')) {
+      if (!res.canEdit && read(KEY.token, '')) {
         lock();
-        setSyncError('O código de acesso mudou. Entre de novo para editar.');
-      } else setCanEdit(res.canEdit);
+        setSyncError('Sua sessão terminou. Entre de novo para editar.');
+      } else {
+        setCanEdit(res.canEdit);
+        if (res.user) setUser(res.user);
+      }
       setStatus('ready');
       setLastSync(Date.now());
     } catch (e) {
@@ -153,7 +158,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const mutate = useCallback(
     async (apply: (l: Library) => Library, send: () => Promise<unknown>) => {
       if (!canEditRef.current) {
-        setSyncError('Entre com o código de acesso para editar.');
+        setSyncError('Entre com seu e-mail e senha para editar.');
         return;
       }
       const before = libRef.current;
@@ -168,7 +173,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         commit(before);
         if (err.status === 401) {
           lock();
-          setSyncError('Só quem tem o código de acesso pode editar.');
+          setSyncError('Sua sessão terminou. Entre de novo para editar.');
         } else setSyncError(`Não foi possível salvar: ${err.message}`);
       } finally {
         pendingWrites.current--;
@@ -199,39 +204,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     collections,
     links,
     prefs,
-    userName,
+    user,
     syncing,
     lastSync,
     syncError,
     clearSyncError: () => setSyncError(null),
     refresh,
-    login: async (code, name) => {
-      setAccessCode(code.trim());
-      try {
-        const res = await api.library();
-        if ('unchanged' in res) throw new ApiError('Resposta inesperada', 500);
-        if (!res.canEdit) throw new ApiError('Código de acesso incorreto.', 401);
-        write(KEY.code, code.trim());
-        write(KEY.name, name.trim());
-        setUserNameState(name.trim());
-        commit({ collections: res.collections, links: res.links }, res.version);
-        setLastSync(Date.now());
-        setCanEdit(true);
-      } catch (e) {
-        setAccessCode('');
-        throw e;
-      }
+    login: async (email, password) => {
+      const { token, user: u } = await api.login(email, password);
+      setToken(token);
+      write(KEY.token, token);
+      write(KEY.user, u);
+      setUser(u);
+      setCanEdit(true);
+      setLastSync(Date.now());
+      return u;
+    },
+    changePassword: async (current, next) => {
+      const { token } = await api.changePassword(current, next);
+      setToken(token);
+      write(KEY.token, token);
     },
     logout: () => lock(),
-    setUserName: (name) => {
-      setUserNameState(name);
-      write(KEY.name, name.trim());
-    },
     collectionById: (id) => collections.find((c) => c.id === id),
     countFor: (id) => counts.get(id) ?? 0,
     saveLink: (link) => {
       const item = { ...link };
-      if (!item.addedBy && userName && !links.some((l) => l.id === link.id)) item.addedBy = userName;
+      if (!item.addedBy && user && !links.some((l) => l.id === link.id)) item.addedBy = user.name;
       mutate((l) => ({ ...l, links: upsert(l.links, item) }), () => api.saveLink(item));
     },
     deleteLink: (id) =>

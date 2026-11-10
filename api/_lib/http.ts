@@ -1,6 +1,6 @@
-import { timingSafeEqual, createHash } from 'node:crypto';
 import { BadRequest } from './validate.js';
 import { ConfigError } from './db.js';
+import { AuthError, devOpen, sessionUser, type User } from './auth.js';
 
 export const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -8,42 +8,30 @@ export const json = (data: unknown, status = 200) =>
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });
 
-const digest = (s: string) => createHash('sha256').update(s).digest();
+const DEV_USER: User = { name: 'Dev', email: 'dev@local' };
 
-/**
- * Código de acesso de quem pode editar (variável ACCESS_CODE na Vercel).
- * Ler é público; criar, editar e apagar exige o código no cabeçalho
- * Authorization: Bearer <código>.
- */
-export function canEdit(req: Request): boolean {
-  const code = process.env.ACCESS_CODE;
-  if (!code) return !process.env.VERCEL; // desenvolvimento local sem código: liberado
-  const sent = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  return !!sent && timingSafeEqual(digest(sent), digest(code));
+/** Usuário logado (ou o usuário de desenvolvimento quando não há contas configuradas localmente). */
+export async function currentUser(req: Request): Promise<User | null> {
+  if (devOpen()) return DEV_USER;
+  return sessionUser(req);
 }
 
-async function authorize(req: Request): Promise<Response | null> {
-  if (!process.env.ACCESS_CODE && process.env.VERCEL) {
-    return json({ error: 'Defina a variável ACCESS_CODE no painel da Vercel.' }, 500);
-  }
-  if (canEdit(req)) return null;
-  await new Promise((r) => setTimeout(r, 400)); // freia tentativas de adivinhação
-  return json({ error: 'Código de acesso incorreto.' }, 401);
-}
+type Handler = (req: Request, user: User | null) => Promise<Response>;
 
 /**
  * Envolve um handler com erros padronizados.
- * Por padrão exige o código (escrita); `{ public: true }` libera a leitura para qualquer pessoa.
+ * Por padrão exige login (escrita). `{ public: true }` libera para qualquer pessoa.
  */
-export function route(fn: (req: Request) => Promise<Response>, opts: { public?: boolean } = {}) {
+export function route(fn: Handler, opts: { public?: boolean } = {}) {
   return async (req: Request) => {
     try {
-      if (!opts.public) {
-        const denied = await authorize(req);
-        if (denied) return denied;
+      const user = await currentUser(req);
+      if (!opts.public && !user) {
+        return json({ error: 'Entre com seu e-mail e senha para editar.' }, 401);
       }
-      return await fn(req);
+      return await fn(req, user);
     } catch (e) {
+      if (e instanceof AuthError) return json({ error: e.message }, e.status);
       if (e instanceof BadRequest) return json({ error: e.message }, 400);
       if (e instanceof ConfigError) return json({ error: e.message }, 500);
       if (e instanceof SyntaxError) return json({ error: 'JSON inválido' }, 400);

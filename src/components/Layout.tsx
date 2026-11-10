@@ -95,13 +95,13 @@ export function TabBar() {
 
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { collections, countFor, links, userName, canEdit } = useStore();
+  const { collections, countFor, links, user, canEdit } = useStore();
   const { openLink, openCollection, openLogin } = useUI();
   const favs = links.filter((l) => l.favorite).length;
   const counts: Record<string, number> = { '/': links.length, '/salvos': favs, '/colecoes': collections.length };
   return (
     <aside className="sidebar glass" aria-label="Barra lateral">
-      <Brand sub={canEdit && userName ? `Olá, ${userName}` : 'Nossos links'} />
+      <Brand sub={canEdit && user ? `Olá, ${user.name}` : 'Nossos links'} />
       {NAV.map(({ to, label, icon: Icon }) => {
         const active = to === '/colecoes' ? pathname === to : isActive(pathname, to);
         return (
@@ -140,7 +140,7 @@ export function Sidebar() {
         </button>
       ) : (
         <button className="btn btn-ghost" style={{ marginTop: 'auto', flexShrink: 0, height: 40 }} onClick={() => openLogin()}>
-          <KeyRound /> Entrar para editar
+          <KeyRound /> Entrar
         </button>
       )}
     </aside>

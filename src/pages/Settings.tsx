@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Bookmark, ChevronRight, Cloud, KeyRound, Copy, Download, FolderClosed, Link2, LogOut, Palette, RefreshCw, Upload, User,
+  Bookmark, ChevronRight, Cloud, KeyRound, Lock, UserRound, Copy, Download, FolderClosed, Link2, LogOut, Palette, RefreshCw, Upload,
 } from 'lucide-react';
 import { APP_NAME } from '../lib/config';
 import { useStore } from '../lib/store';
@@ -50,13 +50,13 @@ function Group({ title, children, note, delay = 0 }: { title: string; children: 
 
 export function Settings() {
   const store = useStore();
-  const { prefs, setPrefs, links, collections, syncing, lastSync, refresh, userName, setUserName, logout, canEdit } = store;
+  const { prefs, setPrefs, links, collections, syncing, lastSync, refresh, user, logout, canEdit } = store;
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 10_000);
     return () => window.clearInterval(id);
   }, []);
-  const { showToast, confirm, openLogin } = useUI();
+  const { showToast, confirm, openLogin, openPassword } = useUI();
   const fileRef = useRef<HTMLInputElement>(null);
   const json = () => JSON.stringify(store.exportLibrary(), null, 2) + '\n';
 
@@ -139,15 +139,15 @@ export function Settings() {
           <div>
             {!canEdit && (
               <Group
-                title="Edição"
+                title="Conta"
                 delay={0.1}
-                note="Qualquer pessoa com o link pode ver. Só quem tem o código de acesso adiciona, edita e apaga."
+                note="Qualquer pessoa com o link pode ver. Só quem tem conta adiciona, edita e apaga."
               >
                 <button className="row" onClick={() => openLogin()}>
                   <span className="row-icon" data-color="blue"><KeyRound /></span>
                   <div className="row-text">
-                    <div className="row-title">Entrar para editar</div>
-                    <div className="row-sub">Use o código de acesso</div>
+                    <div className="row-title">Entrar</div>
+                    <div className="row-sub">Com seu e-mail e senha</div>
                   </div>
                   <ChevronRight className="row-chevron" />
                 </button>
@@ -155,9 +155,9 @@ export function Settings() {
             )}
 
             {canEdit && <Group
-              title="Modo edição"
+              title="Conta"
               delay={0.1}
-              note="Qualquer pessoa com o link vê os links; só quem tem o código edita. As mudanças aparecem nos outros aparelhos em até 30 segundos."
+              note="Qualquer pessoa com o link vê os links; só quem tem conta edita. As mudanças aparecem nos outros aparelhos em até 30 segundos."
             >
               <div className="row">
                 <span className="row-icon" data-color={syncing ? 'blue' : 'green'}>
@@ -171,34 +171,31 @@ export function Settings() {
                   <RefreshCw /> Atualizar
                 </button>
               </div>
-              <label className="row" htmlFor="s-name">
-                <span className="row-icon" data-color="indigo"><User /></span>
+              <div className="row">
+                <span className="row-icon" data-color="indigo"><UserRound /></span>
                 <div className="row-text">
-                  <div className="row-title">Seu nome</div>
-                  <div className="row-sub">Aparece nos links que você adiciona</div>
+                  <div className="row-title">{user?.name ?? 'Conectado'}</div>
+                  <div className="row-sub">{user?.email}</div>
                 </div>
-                <input
-                  id="s-name"
-                  className="input inline-input"
-                  value={userName}
-                  maxLength={30}
-                  placeholder="Nome"
-                  onChange={(e) => setUserName(e.target.value)}
-                />
-              </label>
+              </div>
+              <button className="row" onClick={() => openPassword()}>
+                <span className="row-icon" data-color="gray"><Lock /></span>
+                <div className="row-text"><div className="row-title">Alterar senha</div></div>
+                <ChevronRight className="row-chevron" />
+              </button>
               <button
                 className="row danger"
                 onClick={() =>
                   confirm({
-                    title: 'Sair do modo edição?',
-                    message: 'Neste aparelho você continua vendo os links, mas para editar vai precisar do código de novo.',
+                    title: 'Sair da conta?',
+                    message: 'Neste aparelho você continua vendo os links. Para editar, entre de novo com e-mail e senha.',
                     confirmLabel: 'Sair',
                     onConfirm: logout,
                   })
                 }
               >
                 <span className="row-icon" data-color="red"><LogOut /></span>
-                <div className="row-text"><div className="row-title">Sair do modo edição</div></div>
+                <div className="row-text"><div className="row-title">Sair da conta</div></div>
               </button>
             </Group>}
 

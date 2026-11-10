@@ -5,7 +5,7 @@ import {
   Share, Trash2, CheckCircle2,
 } from 'lucide-react';
 import { Sheet } from './Sheet';
-import { LoginSheet } from './Gate';
+import { LoginSheet, PasswordSheet } from './Gate';
 import { Favicon, Switch, spring } from './primitives';
 import { useStore } from '../lib/store';
 import { copyText, useUI } from '../lib/ui';
@@ -464,6 +464,7 @@ export function SheetHost() {
       {sheet.kind === 'collectionActions' && <CollectionActions key={`ca-${sheet.collection.id}`} collection={sheet.collection} />}
       {sheet.kind === 'confirm' && <Confirm key="confirm" {...sheet} />}
       {sheet.kind === 'login' && <LoginSheet key="login" />}
+      {sheet.kind === 'password' && <PasswordSheet key="password" />}
     </AnimatePresence>
   );
 }
