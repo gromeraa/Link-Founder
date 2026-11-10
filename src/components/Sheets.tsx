@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Bookmark, Check, ChevronDown, ClipboardPaste, Copy, ExternalLink, FolderInput, Link2, Pencil,
-  Share, Trash2, CheckCircle2,
+  Share, Trash2, CheckCircle2, Plus, X,
 } from 'lucide-react';
 import { Sheet } from './Sheet';
 import { LoginSheet, PasswordSheet } from './Gate';
@@ -23,7 +23,7 @@ function titleFromDomain(url: string) {
 
 function LinkForm({ link, collectionId }: { link?: LinkItem; collectionId?: string }) {
   const { collections, links, saveLink, collectionById } = useStore();
-  const { close, showToast, openCollection } = useUI();
+  const { close, showToast } = useUI();
   const editing = !!link;
 
   const [url, setUrl] = useState(link?.url ?? '');
@@ -48,7 +48,6 @@ function LinkForm({ link, collectionId }: { link?: LinkItem; collectionId?: stri
       const t = (await navigator.clipboard.readText()).trim();
       if (t) {
         setUrl(t);
-        if (!title && isValidUrl(t)) setTitle(titleFromDomain(normalizeUrl(t)));
       }
     } catch {
       showToast('Permita o acesso à área de transferência');
@@ -105,10 +104,7 @@ function LinkForm({ link, collectionId }: { link?: LinkItem; collectionId?: stri
               value={url}
               autoFocus={!editing && window.matchMedia('(min-width: 640px)').matches}
               onChange={(e) => setUrl(e.target.value)}
-              onBlur={() => {
-                setTouched(true);
-                if (!title && isValidUrl(url)) setTitle(titleFromDomain(normalizeUrl(url)));
-              }}
+              onBlur={() => setTouched(true)}
             />
             <button type="button" className="input-action" onClick={paste}>
               <ClipboardPaste /> Colar
@@ -147,24 +143,12 @@ function LinkForm({ link, collectionId }: { link?: LinkItem; collectionId?: stri
 
         <div className="field">
           <label className="field-label" htmlFor="f-title">Título</label>
-          <input id="f-title" className="input" placeholder="Nome que vai aparecer no card" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input id="f-title" className="input" placeholder={valid ? `${titleFromDomain(normalized)} (automático)` : 'Nome que vai aparecer no card'} value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
 
         <div className="field">
-          <span className="field-label">Coleção</span>
-          <div className="chips" role="radiogroup" aria-label="Coleção">
-            {collections.map((c) => {
-              const Icon = iconFor(c.icon);
-              const active = c.id === collection;
-              return (
-                <button type="button" key={c.id} role="radio" aria-checked={active} className={`chip ${active ? 'active' : ''}`} data-color={c.color} onClick={() => setCollection(c.id)}>
-                  {active && <motion.span layoutId="form-chip" className="chip-bg" transition={spring} />}
-                  <Icon /> {c.name}
-                </button>
-              );
-            })}
-            <button type="button" className="chip add" onClick={() => openCollection()}>+ Nova</button>
-          </div>
+          <span className="field-label" id="f-col-label">Coleção</span>
+          <CollectionPicker value={collection} onChange={setCollection} />
         </div>
 
         <div className="field">
@@ -191,6 +175,91 @@ function LinkForm({ link, collectionId }: { link?: LinkItem; collectionId?: stri
         <button type="submit" hidden />
       </form>
     </Sheet>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Seletor de coleção (grade que quebra linha + criação rápida)        */
+/* ------------------------------------------------------------------ */
+function CollectionPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const { collections, countFor, saveCollection } = useStore();
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+
+  const create = () => {
+    const n = name.trim();
+    if (!n) return;
+    const existing = collections.find((c) => c.name.toLowerCase() === n.toLowerCase());
+    if (existing) {
+      onChange(existing.id);
+    } else {
+      const used = new Set(collections.map((c) => c.color));
+      const color = COLOR_NAMES.find((c) => !used.has(c)) ?? COLOR_NAMES[collections.length % COLOR_NAMES.length];
+      const id = uniqueId(n, new Set(collections.map((c) => c.id)));
+      saveCollection({ id, name: n, icon: 'folder', color });
+      onChange(id);
+    }
+    setName('');
+    setAdding(false);
+  };
+
+  return (
+    <div className="col-picker" role="radiogroup" aria-labelledby="f-col-label">
+      {collections.map((c) => {
+        const Icon = iconFor(c.icon);
+        const active = c.id === value;
+        return (
+          <motion.button
+            type="button"
+            key={c.id}
+            role="radio"
+            aria-checked={active}
+            className={`col-option ${active ? 'on' : ''}`}
+            data-color={c.color}
+            onClick={() => onChange(c.id)}
+            whileTap={{ scale: 0.96 }}
+          >
+            <span className="col-option-icon"><Icon /></span>
+            <span className="col-option-text">
+              <span className="col-option-name">{c.name}</span>
+              <span className="col-option-count">{plural(countFor(c.id), 'link', 'links')}</span>
+            </span>
+            <AnimatePresence>
+              {active && (
+                <motion.span className="col-option-check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={spring}>
+                  <Check />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        );
+      })}
+
+      {adding ? (
+        <div className="col-option col-new-form">
+          <input
+            className="input"
+            autoFocus
+            placeholder="Nome da coleção"
+            value={name}
+            maxLength={40}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); create(); }
+              if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); }
+            }}
+            aria-label="Nome da nova coleção"
+          />
+          <button type="button" className="btn btn-primary btn-sm" onClick={create} disabled={!name.trim()}>Criar</button>
+          <button type="button" className="icon-btn plain" onClick={() => { setAdding(false); setName(''); }} aria-label="Cancelar nova coleção"><X /></button>
+        </div>
+      ) : (
+        <button type="button" className="col-option col-add" onClick={() => setAdding(true)}>
+          <span className="col-option-icon"><Plus /></span>
+          <span className="col-option-name">Nova coleção</span>
+        </button>
+      )}
+    </div>
   );
 }
 

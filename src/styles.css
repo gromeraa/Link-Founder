@@ -675,3 +675,30 @@ button.row:active, a.row:active { background: var(--fill); }
 label.row { cursor: text; }
 .gate-intro { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 4px; }
 .gate-intro .brand-logo { width: 56px; height: 56px; border-radius: 14px; }
+
+/* ---------- Seletor de coleção no formulário de link ---------- */
+.col-picker {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  padding: 2px; margin: -2px;
+}
+.col-option {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 10px; border-radius: 14px;
+  text-align: left; background: var(--bg-elevated); border: 1px solid var(--hairline);
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s;
+}
+.col-option:hover { border-color: color-mix(in srgb, var(--tint, var(--blue)) 45%, transparent); }
+.col-option.on { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-ring); background: color-mix(in srgb, var(--blue) 5%, var(--bg-elevated)); }
+.col-option-icon { width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: grid; place-items: center; color: #fff; background: var(--tint, var(--blue)); }
+.col-option-icon svg { width: 18px; height: 18px; }
+.col-option-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.col-option-name { font-size: 14px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.col-option-count { font-size: 12px; color: var(--label-2); }
+.col-option-check { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg-elevated); }
+.col-option-check svg { width: 12px; height: 12px; stroke-width: 3; }
+.col-add { border: 1.5px dashed rgba(0, 122, 255, 0.4); background: var(--blue-soft); color: var(--blue); }
+.col-add .col-option-icon { background: var(--blue); }
+.col-new-form { grid-column: 1 / -1; gap: 8px; padding: 6px; border-color: var(--blue); }
+.col-new-form .input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; }
+@media (min-width: 640px) {
+  .col-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 300px; overflow-y: auto; overscroll-behavior: contain; }
+}
