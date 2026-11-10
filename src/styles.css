@@ -660,3 +660,16 @@ button.row:active, a.row:active { background: var(--fill); }
 }
 .menu-item:disabled { opacity: 0.55; cursor: default; }
 .menu-item:disabled:hover { background: none; }
+
+/* ---------- Tela de acesso ---------- */
+.gate { min-height: 100dvh; display: grid; place-items: center; padding: 24px var(--gutter) calc(24px + var(--safe-b)); }
+.gate-card { width: 100%; max-width: 400px; padding: 28px 22px; border-radius: 28px; display: flex; flex-direction: column; gap: 18px; box-shadow: var(--shadow-3); }
+.gate-logo { display: grid; place-items: center; }
+.gate-logo .brand-logo { width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 16px 32px -12px rgba(0, 88, 188, 0.6); }
+.gate-title { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.pulse { animation: pulse 1.4s var(--ease) infinite; }
+@keyframes pulse { 50% { transform: scale(0.92); opacity: 0.7; } }
+
+.toast.error svg { color: #ff6961; }
+.inline-input { width: 130px; padding: 8px 12px; text-align: right; border-radius: 10px; font-size: 15px; }
+label.row { cursor: text; }

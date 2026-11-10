@@ -23,21 +23,21 @@ interface UI {
   openCollectionActions: (collection: Collection) => void;
   confirm: (opts: { title: string; message: string; confirmLabel: string; onConfirm: () => void }) => void;
   close: () => void;
-  toast: string | null;
-  showToast: (msg: string) => void;
+  toast: { msg: string; kind: 'ok' | 'error' } | null;
+  showToast: (msg: string, kind?: 'ok' | 'error') => void;
 }
 
 const Ctx = createContext<UI | null>(null);
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [sheet, setSheet] = useState<SheetState>({ kind: 'none' });
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<UI['toast']>(null);
   const timer = useRef<number>();
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
+  const showToast = useCallback((msg: string, kind: 'ok' | 'error' = 'ok') => {
+    setToast({ msg, kind });
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setToast(null), 2000);
+    timer.current = window.setTimeout(() => setToast(null), kind === 'error' ? 4000 : 2000);
   }, []);
 
   const ui: UI = {

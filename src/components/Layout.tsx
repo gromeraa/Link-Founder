@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Bookmark, CheckCircle2, Compass, FolderClosed, Plus, Settings } from 'lucide-react';
+import { AlertCircle, Bookmark, CheckCircle2, Compass, FolderClosed, Plus, Settings } from 'lucide-react';
+import { APP_NAME } from '../lib/config';
 import { useStore } from '../lib/store';
 import { useUI } from '../lib/ui';
 import { iconFor } from '../lib/icons';
@@ -39,7 +40,7 @@ export function Brand({ sub, className = '' }: { sub?: string; className?: strin
     <Link to="/" className={`brand ${className}`}>
       <Logo />
       <span className="brand-text">
-        <span className="brand-name">Curadoria</span>
+        <span className="brand-name">{APP_NAME}</span>
         {sub && <span className="brand-sub">{sub}</span>}
       </span>
     </Link>
@@ -91,13 +92,13 @@ export function TabBar() {
 
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { collections, countFor, links } = useStore();
+  const { collections, countFor, links, userName } = useStore();
   const { openLink, openCollection } = useUI();
   const favs = links.filter((l) => l.favorite).length;
   const counts: Record<string, number> = { '/': links.length, '/salvos': favs, '/colecoes': collections.length };
   return (
     <aside className="sidebar glass" aria-label="Barra lateral">
-      <Brand sub="Minhas listas de links" />
+      <Brand sub={userName ? `Olá, ${userName}` : 'Nossos links'} />
       {NAV.map(({ to, label, icon: Icon }) => {
         const active = to === '/colecoes' ? pathname === to : isActive(pathname, to);
         return (
@@ -142,14 +143,14 @@ export function Toast() {
       <AnimatePresence>
         {toast && (
           <motion.div
-            key={toast}
-            className="toast"
+            key={toast.msg}
+            className={`toast ${toast.kind}`}
             initial={{ opacity: 0, y: 16, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={spring}
           >
-            <CheckCircle2 /> {toast}
+            {toast.kind === 'error' ? <AlertCircle /> : <CheckCircle2 />} {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>

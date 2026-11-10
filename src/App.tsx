@@ -6,6 +6,7 @@ import { useStore } from './lib/store';
 import { useUI } from './lib/ui';
 import { Ambient, Sidebar, TabBar, Toast } from './components/Layout';
 import { SheetHost } from './components/Sheets';
+import { ErrorScreen, LoadingScreen, LoginScreen } from './components/Gate';
 import { useMediaQuery } from './components/primitives';
 import { Explore } from './pages/Explore';
 import { Collections } from './pages/Collections';
@@ -25,6 +26,31 @@ function useTheme() {
 
 export default function App() {
   useTheme();
+  const { status, syncError, clearSyncError } = useStore();
+  const { showToast } = useUI();
+
+  useEffect(() => {
+    if (syncError) {
+      showToast(syncError, 'error');
+      clearSyncError();
+    }
+  }, [syncError, showToast, clearSyncError]);
+
+  if (status !== 'ready') {
+    return (
+      <>
+        <Ambient />
+        <div className="app">
+          {status === 'locked' ? <LoginScreen /> : status === 'error' ? <ErrorScreen /> : <LoadingScreen />}
+        </div>
+        <Toast />
+      </>
+    );
+  }
+  return <Shell />;
+}
+
+function Shell() {
   const location = useLocation();
   const { openLink } = useUI();
 

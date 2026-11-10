@@ -51,7 +51,10 @@ export const LinkCard = forwardRef<HTMLElement, Props>(function LinkCard(
         </div>
       )}
       <div className="link-foot">
-        <span className="link-date">Adicionado {relativeDate(link.addedAt).toLowerCase()}</span>
+        <span className="link-date">
+          {link.addedBy ? `${link.addedBy} · ` : 'Adicionado '}
+          {link.addedBy ? relativeDate(link.addedAt) : relativeDate(link.addedAt).toLowerCase()}
+        </span>
         <button
           className="icon-btn plain"
           aria-label="Copiar link"

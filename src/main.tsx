@@ -9,8 +9,8 @@ import './styles.css';
 
 // Aplica o tema salvo antes do primeiro paint (evita "piscar")
 try {
-  const saved = JSON.parse(localStorage.getItem('curadoria:v1') ?? '{}');
-  const t = saved?.prefs?.theme;
+  const saved = JSON.parse(localStorage.getItem('estante:prefs') ?? '{}');
+  const t = saved?.theme;
   const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 } catch {

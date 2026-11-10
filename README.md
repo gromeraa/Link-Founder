@@ -1,89 +1,99 @@
-# Curadoria 🔖
+# Estante 🔖
 
-Diretório pessoal de links organizado em **coleções** (filtros), com busca, marcadores, favoritos e ordenação.
-Visual Apple HIG — branco, azul e cinza-claro, glassmorphism e animações — e **mobile first**.
+Diretório de links **compartilhado** organizado em coleções (filtros), com busca, marcadores, favoritos e ordenação.
+Quem tem o **código de acesso** vê e edita a mesma estante, de qualquer aparelho.
+Visual Apple HIG: branco, azul e cinza-claro, glassmorphism e animações. Pensado primeiro para o celular.
 
-**Stack:** Vite + React + TypeScript · Motion (animações) · Lucide (ícones) · sem backend.
-Hospedagem 100% grátis: código no **GitHub**, deploy automático na **Vercel**.
+**Stack (tudo grátis):**
+- **GitHub**: guarda o código
+- **Vercel**: hospeda o site e a API (`/api`, Vercel Functions)
+- **Upstash Redis**: banco de dados, conectado pelo Marketplace da Vercel (plano gratuito)
+- Vite + React + TypeScript · Motion (animações) · Lucide (ícones)
 
 ---
 
-## Rodar no seu computador
+## Publicar (uma vez só, ~10 minutos)
+
+### 1. Código no GitHub
+```bash
+npm install
+git remote add origin https://github.com/SEU_USUARIO/estante.git
+git push -u origin main
+```
+
+### 2. Site na Vercel
+Em [vercel.com/new](https://vercel.com/new), entre com o GitHub, importe o repositório e clique **Deploy**.
+(O primeiro acesso vai mostrar um erro de banco não conectado. É esperado: os próximos passos resolvem.)
+
+### 3. Banco de dados (grátis)
+No projeto na Vercel: **Storage → Create Database → Upstash for Redis** → plano **Free** → **Connect** ao projeto.
+A Vercel cria sozinha as variáveis de conexão (`KV_REST_API_URL` / `KV_REST_API_TOKEN` ou `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`; o app aceita os dois nomes).
+
+### 4. Código de acesso
+**Settings → Environment Variables** → adicione:
+
+| Nome | Valor |
+| --- | --- |
+| `ACCESS_CODE` | uma frase que só vocês dois saibam, ex.: `girassol-azul-2026` |
+
+Use algo comprido: é a única proteção da estante.
+
+### 5. Publicar de novo
+**Deployments → ⋯ → Redeploy**. Pronto!
+
+### 6. Nos celulares
+Abra o site, digite **seu nome** e o **código**. Ele fica salvo, então só é preciso digitar uma vez.
+Dica: no Safari use **Compartilhar → Adicionar à Tela de Início** (no Android, menu **⋮ → Instalar app**). A Estante abre como um app.
+
+No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/seed.ts`. Edite ou apague à vontade pelo próprio site.
+
+---
+
+## Como funciona o compartilhamento
+
+- Tudo que um de vocês adiciona, edita, move ou apaga vai direto para o banco.
+- Os outros aparelhos conferem novidades **a cada 30 segundos** e sempre que o app volta para a tela.
+- Em **Ajustes** dá para atualizar na hora, ver quando sincronizou, mudar seu nome e sair do aparelho.
+- Cada link mostra **quem adicionou** ("Ana · Há 2 dias").
+- Os **Salvos** (favoritos) são compartilhados entre vocês.
+
+**Backup:** Ajustes → *Baixar backup (.json)*. Para voltar uma cópia: *Restaurar backup*, que substitui a estante inteira para todos.
+
+**Trocar o código:** mude `ACCESS_CODE` na Vercel e faça Redeploy. Os aparelhos voltam para a tela de acesso.
+
+## Criar um novo "tipo de filtro"
+
+Pelo site: **+ Novo filtro** (tela inicial) ou **Nova coleção**. Escolha nome, cor e ícone. Ela aparece na hora como chip de filtro, pasta em Coleções e item na barra lateral, para os dois.
+
+Para ter mais ícones à disposição: importe de [lucide.dev/icons](https://lucide.dev/icons) em `src/lib/icons.ts`.
+
+## Trocar o nome do app
+
+`src/lib/config.ts` (`APP_NAME`), `index.html` (`<title>`) e `public/manifest.webmanifest`.
+
+## Rodar no computador
 
 ```bash
 npm install
-npm run dev        # abre em http://localhost:5173
-npm run build      # gera a pasta dist/
+npm run dev        # http://localhost:5173 — a API roda junto, com dados em memória
 ```
 
-Requer Node 18+.
+Para exigir código localmente: `ACCESS_CODE=teste npm run dev`.
+Para usar o banco real: `npx vercel link && npx vercel env pull` e depois `npx vercel dev`.
 
-## Publicar (GitHub + Vercel, grátis)
+## Estrutura
 
-1. Crie um repositório no GitHub (ex.: `curadoria`) e envie o projeto:
-   ```bash
-   git init && git add . && git commit -m "Curadoria"
-   git branch -M main
-   git remote add origin https://github.com/SEU_USUARIO/curadoria.git
-   git push -u origin main
-   ```
-2. Em [vercel.com/new](https://vercel.com/new), entre com o GitHub, importe o repositório e clique **Deploy**.
-   A Vercel detecta Vite sozinha (o `vercel.json` já está configurado).
-3. Pronto. Cada `git push` na `main` publica uma nova versão em ~1 minuto.
-
----
-
-## Onde ficam os links
-
-Tudo está em **um arquivo só**: [`src/data/library.json`](src/data/library.json).
-
-### Criar um novo "tipo de filtro" (coleção)
-
-Adicione um item em `collections`:
-
-```json
-{
-  "id": "cursos",
-  "name": "Cursos",
-  "description": "Plataformas e cursos gratuitos.",
-  "icon": "graduation",
-  "color": "green"
-}
 ```
-
-- `id`: curto, sem espaços/acentos — é o que os links usam para apontar para a coleção.
-- `icon`: um dos nomes em [`src/lib/icons.ts`](src/lib/icons.ts) (`folder`, `github`, `code`, `building`, `briefcase`, `sparkles`, `bot`, `smartphone`, `layout`, `palette`, `pen`, `type`, `book`, `graduation`, `newspaper`, `wrench`, `database`, `cloud`, `globe`, `rocket`, `camera`, `film`, `music`, `gamepad`, `shopping`, `landmark`, `health`, `travel`, `heart`, `star`).
-- `color`: `blue`, `indigo`, `purple`, `pink`, `red`, `orange`, `yellow`, `green`, `teal` ou `gray`.
-
-A coleção vira automaticamente um chip de filtro na tela inicial, um card em Coleções e um item na barra lateral.
-
-### Adicionar um site
-
-Adicione um item em `links`:
-
-```json
-{
-  "id": "coursera",
-  "url": "https://www.coursera.org",
-  "title": "Coursera",
-  "description": "Cursos de universidades, muitos com opção gratuita.",
-  "collection": "cursos",
-  "tags": ["certificado", "inglês"],
-  "addedAt": "2026-11-10",
-  "favorite": true
-}
+api/                     ← Vercel Functions (rodam no servidor)
+  library.ts             ← GET biblioteca · PUT restaurar backup
+  links.ts               ← POST salvar link · DELETE apagar
+  collections.ts         ← POST salvar coleção · DELETE apagar (com seus links)
+  _lib/                  ← banco (Redis/memória), código de acesso, validação, dados iniciais
+src/
+  lib/store.tsx          ← estado do app, sincronização e edição otimista
+  components/  pages/    ← interface
+  styles.css             ← tokens do design (cores, vidro, sombras) e layout
 ```
-
-Só `id`, `url`, `title`, `collection` e `addedAt` são obrigatórios.
-
-### Ou pelo próprio site (sem mexer em código)
-
-1. Use **+ Novo link** e **Nova coleção** no site. Tudo fica salvo no seu navegador na hora.
-2. Quando quiser publicar para todos os aparelhos: **Ajustes → Baixar library.json** (ou **Copiar JSON**).
-3. No GitHub, abra `src/data/library.json` → ✏️ editar → cole/substitua → **Commit**. A Vercel publica sozinha.
-4. Opcional: **Ajustes → Descartar alterações locais** para voltar a ver só o que está publicado.
-
-> O site é estático: o que você cria no navegador não aparece para outras pessoas até ir para o `library.json` no GitHub.
 
 ## Atalhos
 
@@ -92,16 +102,3 @@ Só `id`, `url`, `title`, `collection` e `addedAt` são obrigatórios.
 | `/` ou `Ctrl/⌘ + K` | Buscar |
 | `N` | Novo link |
 | `Esc` | Fechar janela / limpar busca |
-
-## Estrutura
-
-```
-src/
-  data/library.json      ← seus links e coleções
-  lib/                   ← tipos, armazenamento, ícones, utilitários
-  components/            ← cards, folhas (modais), barra lateral, tab bar
-  pages/                 ← Explorar, Coleções, Coleção, Salvos, Ajustes
-  styles.css             ← tokens do design (cores, vidro, sombras) e layout
-```
-
-Os ícones dos sites vêm do serviço público de favicons do Google; se algum falhar, aparece a inicial colorida.

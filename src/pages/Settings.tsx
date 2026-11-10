@@ -1,11 +1,13 @@
-import { useRef } from 'react';
 import { motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Bookmark, ChevronRight, CloudUpload, Copy, Download, FolderClosed, Link2, Palette, RotateCcw, Upload,
+  Bookmark, ChevronRight, Cloud, Copy, Download, FolderClosed, Link2, LogOut, Palette, RefreshCw, Upload, User,
 } from 'lucide-react';
+import { APP_NAME } from '../lib/config';
 import { useStore } from '../lib/store';
 import { copyText, useUI } from '../lib/ui';
 import type { Library, ThemeMode } from '../lib/types';
+import type { ReactNode } from 'react';
 import { Page, TopBar } from '../components/Layout';
 import { Segmented, softSpring } from '../components/primitives';
 import { plural } from '../lib/utils';
@@ -21,6 +23,14 @@ function download(name: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+function timeAgo(t: number, now: number) {
+  const s = Math.round((now - t) / 1000);
+  if (s < 15) return 'agora mesmo';
+  if (s < 60) return `há ${s} s`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `há ${m} min` : `às ${new Date(t).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 function isLibrary(x: unknown): x is Library {
   const l = x as Library;
   return !!l && Array.isArray(l.collections) && Array.isArray(l.links) &&
@@ -28,7 +38,7 @@ function isLibrary(x: unknown): x is Library {
     l.links.every((k) => typeof k.id === 'string' && typeof k.url === 'string' && typeof k.collection === 'string');
 }
 
-function Group({ title, children, note, delay = 0 }: { title: string; children: React.ReactNode; note?: React.ReactNode; delay?: number }) {
+function Group({ title, children, note, delay = 0 }: { title: string; children: ReactNode; note?: ReactNode; delay?: number }) {
   return (
     <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...softSpring, delay }}>
       <div className="overline">{title}</div>
@@ -40,23 +50,39 @@ function Group({ title, children, note, delay = 0 }: { title: string; children: 
 
 export function Settings() {
   const store = useStore();
-  const { prefs, setPrefs, links, collections, pendingChanges } = store;
+  const { prefs, setPrefs, links, collections, syncing, lastSync, refresh, userName, setUserName, logout } = store;
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 10_000);
+    return () => window.clearInterval(id);
+  }, []);
   const { showToast, confirm } = useUI();
   const fileRef = useRef<HTMLInputElement>(null);
   const json = () => JSON.stringify(store.exportLibrary(), null, 2) + '\n';
 
   const onImport = async (file?: File) => {
+    if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
+    let data: unknown;
     try {
-      const data = JSON.parse(await file.text());
-      if (!isLibrary(data)) throw new Error('formato');
-      store.importLibrary(data);
-      showToast(`${plural(data.links.length, 'link importado', 'links importados')}`);
+      data = JSON.parse(await file.text());
     } catch {
-      showToast('Arquivo inválido — use um library.json');
-    } finally {
-      if (fileRef.current) fileRef.current.value = '';
+      data = null;
     }
+    if (!isLibrary(data)) {
+      showToast('Arquivo inválido: escolha um backup .json da Estante', 'error');
+      return;
+    }
+    const lib = data;
+    confirm({
+      title: 'Restaurar backup?',
+      message: `A estante atual será trocada por ${plural(lib.links.length, 'link', 'links')} e ${plural(lib.collections.length, 'coleção', 'coleções')}, para todos que usam.`,
+      confirmLabel: 'Restaurar',
+      onConfirm: async () => {
+        await store.importLibrary(lib);
+        showToast('Backup restaurado');
+      },
+    });
   };
 
   return (
@@ -66,7 +92,7 @@ export function Settings() {
         <div className="page-head">
           <div className="page-head-text">
             <h1 className="large-title">Ajustes</h1>
-            <p className="page-sub">Aparência, backup e publicação.</p>
+            <p className="page-sub">Aparência, compartilhamento e backup.</p>
           </div>
         </div>
 
@@ -112,71 +138,82 @@ export function Settings() {
 
           <div>
             <Group
-              title="Publicar no site"
+              title="Compartilhamento"
               delay={0.1}
-              note={
-                <>
-                  O que você cria aqui fica salvo neste navegador. Para publicar para todo mundo (e em outros aparelhos):
-                  baixe o <code>library.json</code>, substitua o arquivo <code>src/data/library.json</code> no GitHub e faça
-                  commit — a Vercel publica sozinha em ~1 min.
-                </>
-              }
+              note="Quem tem o código de acesso vê e edita a mesma estante. As mudanças aparecem nos outros aparelhos em até 30 segundos."
             >
               <div className="row">
-                <span className="row-icon" data-color={pendingChanges ? 'orange' : 'green'}><CloudUpload /></span>
+                <span className="row-icon" data-color={syncing ? 'blue' : 'green'}>
+                  <Cloud />
+                </span>
                 <div className="row-text">
-                  <div className="row-title">Alterações não publicadas</div>
-                  <div className="row-sub">{pendingChanges ? 'Exporte para levar ao GitHub' : 'Tudo igual ao site publicado'}</div>
+                  <div className="row-title">{syncing ? 'Sincronizando…' : 'Sincronizado'}</div>
+                  <div className="row-sub">{lastSync ? `Atualizado ${timeAgo(lastSync, now)}` : 'Aguardando servidor'}</div>
                 </div>
-                <span className="row-value" style={{ fontWeight: 600, color: pendingChanges ? 'var(--label)' : undefined }}>{pendingChanges}</span>
+                <button className="btn btn-secondary btn-sm" onClick={async () => { await refresh(); showToast('Estante atualizada'); }}>
+                  <RefreshCw /> Atualizar
+                </button>
               </div>
-              <button className="row" onClick={() => { download('library.json', json()); showToast('library.json baixado'); }}>
-                <span className="row-icon" data-color="blue"><Download /></span>
-                <div className="row-text"><div className="row-title">Baixar library.json</div></div>
-                <ChevronRight className="row-chevron" />
-              </button>
-              <button className="row" onClick={async () => { if (await copyText(json())) showToast('JSON copiado'); }}>
-                <span className="row-icon" data-color="indigo"><Copy /></span>
+              <label className="row" htmlFor="s-name">
+                <span className="row-icon" data-color="indigo"><User /></span>
                 <div className="row-text">
-                  <div className="row-title">Copiar JSON</div>
-                  <div className="row-sub">Para colar direto no editor do GitHub</div>
+                  <div className="row-title">Seu nome</div>
+                  <div className="row-sub">Aparece nos links que você adiciona</div>
                 </div>
-                <ChevronRight className="row-chevron" />
+                <input
+                  id="s-name"
+                  className="input inline-input"
+                  value={userName}
+                  maxLength={30}
+                  placeholder="Nome"
+                  onChange={(e) => setUserName(e.target.value)}
+                />
+              </label>
+              <button
+                className="row danger"
+                onClick={() =>
+                  confirm({
+                    title: 'Sair deste aparelho?',
+                    message: 'Os links continuam salvos. Para entrar de novo, use o código de acesso.',
+                    confirmLabel: 'Sair',
+                    onConfirm: logout,
+                  })
+                }
+              >
+                <span className="row-icon" data-color="red"><LogOut /></span>
+                <div className="row-text"><div className="row-title">Sair deste aparelho</div></div>
               </button>
             </Group>
 
             <Group title="Backup" delay={0.15}>
-              <button className="row" onClick={() => fileRef.current?.click()}>
-                <span className="row-icon" data-color="green"><Upload /></span>
+              <button className="row" onClick={() => { download(`estante-${new Date().toISOString().slice(0, 10)}.json`, json()); showToast('Backup baixado'); }}>
+                <span className="row-icon" data-color="blue"><Download /></span>
                 <div className="row-text">
-                  <div className="row-title">Importar library.json</div>
-                  <div className="row-sub">Substitui a biblioteca neste navegador</div>
+                  <div className="row-title">Baixar backup (.json)</div>
+                  <div className="row-sub">Cópia de todos os links e coleções</div>
+                </div>
+                <ChevronRight className="row-chevron" />
+              </button>
+              <button className="row" onClick={async () => { if (await copyText(json())) showToast('JSON copiado'); }}>
+                <span className="row-icon" data-color="indigo"><Copy /></span>
+                <div className="row-text"><div className="row-title">Copiar JSON</div></div>
+                <ChevronRight className="row-chevron" />
+              </button>
+              <button className="row" onClick={() => fileRef.current?.click()}>
+                <span className="row-icon" data-color="orange"><Upload /></span>
+                <div className="row-text">
+                  <div className="row-title">Restaurar backup</div>
+                  <div className="row-sub">Substitui a estante inteira, para todos</div>
                 </div>
                 <ChevronRight className="row-chevron" />
               </button>
               <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => onImport(e.target.files?.[0])} />
-              <button
-                className="row danger"
-                disabled={!pendingChanges}
-                style={{ opacity: pendingChanges ? 1 : 0.45 }}
-                onClick={() =>
-                  confirm({
-                    title: 'Descartar alterações?',
-                    message: `As ${plural(pendingChanges, 'alteração local', 'alterações locais')} serão apagadas e a biblioteca volta a ser a publicada.`,
-                    confirmLabel: 'Descartar',
-                    onConfirm: () => { store.resetLocal(); showToast('Biblioteca restaurada'); },
-                  })
-                }
-              >
-                <span className="row-icon" data-color="red"><RotateCcw /></span>
-                <div className="row-text"><div className="row-title">Descartar alterações locais</div></div>
-              </button>
             </Group>
           </div>
         </div>
 
         <p className="footer-note">
-          Curadoria · hospedado grátis no GitHub + Vercel
+          {APP_NAME} · hospedado grátis no GitHub + Vercel
           <br />
           Atalho: pressione <b>/</b> para buscar
         </p>

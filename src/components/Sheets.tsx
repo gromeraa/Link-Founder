@@ -366,7 +366,7 @@ function LinkActions({ link }: { link: LinkItem }) {
           onClick={() =>
             confirm({
               title: 'Excluir link?',
-              message: `“${current.title}” será removido da sua curadoria.`,
+              message: `“${current.title}” será removido para todos.`,
               confirmLabel: 'Excluir link',
               onConfirm: () => { deleteLink(current.id); showToast('Link excluído'); },
             })
