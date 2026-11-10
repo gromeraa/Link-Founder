@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertCircle, Bookmark, CheckCircle2, Compass, FolderClosed, Plus, Settings } from 'lucide-react';
+import { AlertCircle, Bookmark, CheckCircle2, Compass, FolderClosed, KeyRound, Plus, Settings } from 'lucide-react';
 import { APP_NAME } from '../lib/config';
 import { useStore } from '../lib/store';
 import { useUI } from '../lib/ui';
@@ -50,6 +50,7 @@ export function Brand({ sub, className = '' }: { sub?: string; className?: strin
 export function TopBar({ title, children, brand = true }: { title: string; children?: ReactNode; brand?: boolean }) {
   const scrolled = useScrolled();
   const { openLink } = useUI();
+  const { canEdit } = useStore();
   return (
     <header className={`topbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="container topbar-inner">
@@ -63,9 +64,11 @@ export function TopBar({ title, children, brand = true }: { title: string; child
         )}
         <div className="topbar-actions">
           {children}
-          <motion.button whileTap={{ scale: 0.9 }} className="icon-btn glassy mobile-only" onClick={() => openLink()} aria-label="Adicionar link">
-            <Plus />
-          </motion.button>
+          {canEdit && (
+            <motion.button whileTap={{ scale: 0.9 }} className="icon-btn glassy mobile-only" onClick={() => openLink()} aria-label="Adicionar link">
+              <Plus />
+            </motion.button>
+          )}
         </div>
       </div>
     </header>
@@ -92,13 +95,13 @@ export function TabBar() {
 
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { collections, countFor, links, userName } = useStore();
-  const { openLink, openCollection } = useUI();
+  const { collections, countFor, links, userName, canEdit } = useStore();
+  const { openLink, openCollection, openLogin } = useUI();
   const favs = links.filter((l) => l.favorite).length;
   const counts: Record<string, number> = { '/': links.length, '/salvos': favs, '/colecoes': collections.length };
   return (
     <aside className="sidebar glass" aria-label="Barra lateral">
-      <Brand sub={userName ? `Olá, ${userName}` : 'Nossos links'} />
+      <Brand sub={canEdit && userName ? `Olá, ${userName}` : 'Nossos links'} />
       {NAV.map(({ to, label, icon: Icon }) => {
         const active = to === '/colecoes' ? pathname === to : isActive(pathname, to);
         return (
@@ -112,9 +115,11 @@ export function Sidebar() {
       })}
       <div className="side-label">
         Coleções
-        <button onClick={() => openCollection()} aria-label="Nova coleção" title="Nova coleção">
-          <Plus />
-        </button>
+        {canEdit && (
+          <button onClick={() => openCollection()} aria-label="Nova coleção" title="Nova coleção">
+            <Plus />
+          </button>
+        )}
       </div>
       {collections.map((c) => {
         const Icon = iconFor(c.icon);
@@ -129,9 +134,15 @@ export function Sidebar() {
           </Link>
         );
       })}
-      <button className="btn btn-primary" style={{ marginTop: 'auto', flexShrink: 0 }} onClick={() => openLink()}>
-        <Plus /> Novo link
-      </button>
+      {canEdit ? (
+        <button className="btn btn-primary" style={{ marginTop: 'auto', flexShrink: 0 }} onClick={() => openLink()}>
+          <Plus /> Novo link
+        </button>
+      ) : (
+        <button className="btn btn-ghost" style={{ marginTop: 'auto', flexShrink: 0, height: 40 }} onClick={() => openLogin()}>
+          <KeyRound /> Entrar para editar
+        </button>
+      )}
     </aside>
   );
 }

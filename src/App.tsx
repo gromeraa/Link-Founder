@@ -6,7 +6,7 @@ import { useStore } from './lib/store';
 import { useUI } from './lib/ui';
 import { Ambient, Sidebar, TabBar, Toast } from './components/Layout';
 import { SheetHost } from './components/Sheets';
-import { ErrorScreen, LoadingScreen, LoginScreen } from './components/Gate';
+import { ErrorScreen, LoadingScreen } from './components/Gate';
 import { useMediaQuery } from './components/primitives';
 import { Explore } from './pages/Explore';
 import { Collections } from './pages/Collections';
@@ -41,7 +41,7 @@ export default function App() {
       <>
         <Ambient />
         <div className="app">
-          {status === 'locked' ? <LoginScreen /> : status === 'error' ? <ErrorScreen /> : <LoadingScreen />}
+          {status === 'error' ? <ErrorScreen /> : <LoadingScreen />}
         </div>
         <Toast />
       </>
@@ -53,6 +53,7 @@ export default function App() {
 function Shell() {
   const location = useLocation();
   const { openLink } = useUI();
+  const { canEdit } = useStore();
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -63,16 +64,16 @@ function Shell() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (/INPUT|TEXTAREA/.test(t.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'n' && !document.querySelector('.sheet')) {
+      if (e.key === 'n' && canEdit && !document.querySelector('.sheet')) {
         e.preventDefault();
         openLink();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [openLink]);
+  }, [openLink, canEdit]);
 
-  const showFab = location.pathname.startsWith('/colecoes/');
+  const showFab = canEdit && location.pathname.startsWith('/colecoes/');
 
   return (
     <>

@@ -10,7 +10,7 @@ import { Favicon, softSpring } from '../components/primitives';
 import type { Collection } from '../lib/types';
 
 function FolderCard({ c, index }: { c: Collection; index: number }) {
-  const { links } = useStore();
+  const { links, canEdit } = useStore();
   const { openCollectionActions } = useUI();
   const Icon = iconFor(c.icon);
   const items = sortLinks(links.filter((l) => l.collection === c.id), 'recent');
@@ -42,16 +42,18 @@ function FolderCard({ c, index }: { c: Collection; index: number }) {
             {last && ` · ${relativeDate(last.addedAt)}`}
           </div>
         </div>
-        <button className="icon-btn plain" aria-label={`Opções de ${c.name}`} onClick={() => openCollectionActions(c)}>
-          <MoreHorizontal />
-        </button>
+        {canEdit && (
+          <button className="icon-btn plain" aria-label={`Opções de ${c.name}`} onClick={() => openCollectionActions(c)}>
+            <MoreHorizontal />
+          </button>
+        )}
       </div>
     </motion.div>
   );
 }
 
 export function Collections() {
-  const { collections, links, setPrefs } = useStore();
+  const { collections, links, setPrefs, canEdit } = useStore();
   const { openCollection } = useUI();
   const navigate = useNavigate();
   const favs = links.filter((l) => l.favorite).length;
@@ -75,9 +77,11 @@ export function Collections() {
               {plural(collections.length, 'coleção', 'coleções')} · {plural(links.length, 'link curado', 'links curados')}
             </p>
           </div>
-          <motion.button whileTap={{ scale: 0.95 }} className="btn btn-primary" onClick={() => openCollection()}>
-            <Plus /> Nova
-          </motion.button>
+          {canEdit && (
+            <motion.button whileTap={{ scale: 0.95 }} className="btn btn-primary" onClick={() => openCollection()}>
+              <Plus /> Nova
+            </motion.button>
+          )}
         </div>
 
         <div className="overline">Pastas inteligentes</div>
@@ -114,6 +118,7 @@ export function Collections() {
           {collections.map((c, i) => (
             <FolderCard key={c.id} c={c} index={i} />
           ))}
+          {canEdit && (
           <motion.button
             layout
             className="new-folder"
@@ -125,6 +130,7 @@ export function Collections() {
             <span><Plus /></span>
             Nova coleção
           </motion.button>
+          )}
         </div>
       </div>
     </Page>

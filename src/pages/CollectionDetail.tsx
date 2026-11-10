@@ -11,7 +11,7 @@ import { LinkGrid, TagChips } from '../components/LinkList';
 
 export function CollectionDetail() {
   const { id = '' } = useParams();
-  const { collectionById, links } = useStore();
+  const { collectionById, links, canEdit } = useStore();
   const { openLink, openCollection, openCollectionActions } = useUI();
   const [q, setQ] = useState('');
   const [tag, setTag] = useState('');
@@ -47,9 +47,11 @@ export function CollectionDetail() {
   return (
     <Page>
       <TopBar title={c.name}>
-        <button className="icon-btn glassy" onClick={() => openCollectionActions(c)} aria-label="Opções da coleção">
-          <MoreHorizontal />
-        </button>
+        {canEdit && (
+          <button className="icon-btn glassy" onClick={() => openCollectionActions(c)} aria-label="Opções da coleção">
+            <MoreHorizontal />
+          </button>
+        )}
       </TopBar>
       <div className="container" data-color={c.color}>
         <Link to="/colecoes" className="back">
@@ -69,7 +71,7 @@ export function CollectionDetail() {
             </div>
           </div>
           {c.description && <p className="hero-desc">{c.description}</p>}
-          <div className="hero-actions">
+          {canEdit && <div className="hero-actions">
             <button className="hero-action primary" onClick={() => openLink({ collectionId: c.id })}>
               <Plus /> Novo link
             </button>
@@ -79,7 +81,7 @@ export function CollectionDetail() {
             <button className="hero-action" onClick={() => openCollectionActions(c)}>
               <MoreHorizontal /> Mais
             </button>
-          </div>
+          </div>}
         </section>
 
         <SearchBar value={q} onChange={setQ} placeholder={`Buscar em ${c.name}…`} />
@@ -93,8 +95,8 @@ export function CollectionDetail() {
               <Empty
                 icon={<Link2 />}
                 title="Nenhum link ainda"
-                text={`Comece a montar a lista “${c.name}”.`}
-                action={<button className="btn btn-primary" onClick={() => openLink({ collectionId: c.id })}><Plus /> Adicionar link</button>}
+                text={canEdit ? `Comece a montar a lista “${c.name}”.` : 'Ainda não há links nesta coleção.'}
+                action={canEdit && <button className="btn btn-primary" onClick={() => openLink({ collectionId: c.id })}><Plus /> Adicionar link</button>}
               />
             ) : (
               <Empty

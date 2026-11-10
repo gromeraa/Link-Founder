@@ -5,6 +5,7 @@ import {
   Share, Trash2, CheckCircle2,
 } from 'lucide-react';
 import { Sheet } from './Sheet';
+import { LoginSheet } from './Gate';
 import { Favicon, Switch, spring } from './primitives';
 import { useStore } from '../lib/store';
 import { copyText, useUI } from '../lib/ui';
@@ -275,7 +276,7 @@ function CollectionForm({ collection }: { collection?: Collection }) {
 /* Ações de um link                                                    */
 /* ------------------------------------------------------------------ */
 function LinkActions({ link }: { link: LinkItem }) {
-  const { collections, collectionById, toggleFavorite, saveLink, deleteLink, links } = useStore();
+  const { collections, collectionById, toggleFavorite, saveLink, deleteLink, links, canEdit } = useStore();
   const { close, showToast, openLink, confirm } = useUI();
   const [moving, setMoving] = useState(false);
   const current = links.find((l) => l.id === link.id) ?? link;
@@ -317,6 +318,8 @@ function LinkActions({ link }: { link: LinkItem }) {
         <button className="menu-item" onClick={share}>
           <Share /> Compartilhar
         </button>
+        {canEdit && (
+          <>
         <button className="menu-item" onClick={() => { toggleFavorite(current.id); showToast(current.favorite ? 'Removido dos salvos' : 'Salvo nos favoritos'); close(); }}>
           <Bookmark className={current.favorite ? 'fav-on' : ''} style={current.favorite ? { fill: 'currentColor', color: 'var(--blue)' } : undefined} />
           {current.favorite ? 'Remover dos salvos' : 'Salvar nos favoritos'}
@@ -374,6 +377,8 @@ function LinkActions({ link }: { link: LinkItem }) {
         >
           <Trash2 /> Excluir
         </button>
+          </>
+        )}
       </div>
     </Sheet>
   );
@@ -458,6 +463,7 @@ export function SheetHost() {
       {sheet.kind === 'actions' && <LinkActions key={`a-${sheet.link.id}`} link={sheet.link} />}
       {sheet.kind === 'collectionActions' && <CollectionActions key={`ca-${sheet.collection.id}`} collection={sheet.collection} />}
       {sheet.kind === 'confirm' && <Confirm key="confirm" {...sheet} />}
+      {sheet.kind === 'login' && <LoginSheet key="login" />}
     </AnimatePresence>
   );
 }

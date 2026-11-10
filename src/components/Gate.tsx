@@ -2,25 +2,31 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, KeyRound, RefreshCw, User, WifiOff } from 'lucide-react';
 import { useStore } from '../lib/store';
-import { APP_NAME, APP_TAGLINE } from '../lib/config';
+import { APP_NAME } from '../lib/config';
+import { useUI } from '../lib/ui';
+import { Sheet } from './Sheet';
 import { Logo } from './Layout';
 import { softSpring } from './primitives';
 
-/** Tela de acesso: código compartilhado + nome de quem está usando. */
-export function LoginScreen() {
+/** Entrar no modo de edição: nome + código de acesso. */
+export function LoginSheet() {
   const { login, userName } = useStore();
+  const { close, showToast } = useUI();
   const [code, setCode] = useState('');
   const [name, setName] = useState(userName);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const ready = !!code.trim() && !!name.trim() && !busy;
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code.trim() || !name.trim()) return;
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!ready) return;
     setBusy(true);
     setError('');
     try {
       await login(code, name);
+      close();
+      showToast(`Olá, ${name.trim()}! Edição liberada`);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -29,20 +35,26 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="gate">
-      <motion.form
-        className="card gate-card"
-        onSubmit={submit}
-        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={softSpring}
-      >
-        <motion.div initial={{ scale: 0.6, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={{ ...softSpring, delay: 0.1 }} className="gate-logo">
-          <Logo />
-        </motion.div>
-        <div style={{ textAlign: 'center' }}>
-          <h1 className="gate-title">{APP_NAME}</h1>
-          <p className="page-sub">{APP_TAGLINE}</p>
+    <Sheet
+      open
+      onClose={close}
+      title="Entrar para editar"
+      left={<button className="btn-ghost btn cancel" onClick={close}>Cancelar</button>}
+      right={<span />}
+      footer={
+        <button className="btn btn-primary btn-block" onClick={() => submit()} disabled={!ready}>
+          {busy ? 'Entrando…' : <>Entrar <ArrowRight /></>}
+        </button>
+      }
+    >
+      <form className="sheet-body" onSubmit={submit}>
+        <div className="gate-intro">
+          <motion.div initial={{ scale: 0.6, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={softSpring} className="gate-logo">
+            <Logo />
+          </motion.div>
+          <p className="page-sub" style={{ textAlign: 'center', margin: 0 }}>
+            Qualquer pessoa pode ver os links do {APP_NAME}. Para adicionar, editar ou apagar, use o código de acesso.
+          </p>
         </div>
 
         <div className="field">
@@ -68,21 +80,17 @@ export function LoginScreen() {
               autoComplete="current-password"
             />
           </div>
-          {error && (
-            <motion.span initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: [0, -6, 6, -3, 0] }} className="field-error">
+          {error ? (
+            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1, x: [0, -6, 6, -3, 0] }} className="field-error">
               {error}
             </motion.span>
+          ) : (
+            <span className="field-hint">Fica salvo neste aparelho. Você só digita uma vez.</span>
           )}
         </div>
-
-        <button className="btn btn-primary btn-block" disabled={busy || !code.trim() || !name.trim()}>
-          {busy ? 'Entrando…' : <>Entrar <ArrowRight /></>}
-        </button>
-        <p className="field-hint" style={{ textAlign: 'center' }}>
-          O código fica salvo neste aparelho. Você só digita uma vez.
-        </p>
-      </motion.form>
-    </div>
+        <button type="submit" hidden />
+      </form>
+    </Sheet>
   );
 }
 

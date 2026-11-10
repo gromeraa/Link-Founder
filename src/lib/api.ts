@@ -32,7 +32,9 @@ type Ok = { ok: true; version: number };
 
 export const api = {
   library: (since?: number) =>
-    call<LibraryResponse | { unchanged: true; version: number }>(`library${since ? `?v=${since}` : ''}`),
+    call<(LibraryResponse | { unchanged: true; version: number }) & { canEdit: boolean }>(
+      `library${since ? `?v=${since}` : ''}`,
+    ),
   replace: (lib: Library) => call<Ok>('library', { method: 'PUT', body: JSON.stringify(lib) }),
   saveLink: (l: LinkItem) => call<Ok>('links', { method: 'POST', body: JSON.stringify(l) }),
   deleteLink: (id: string) => call<Ok>(`links?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),

@@ -17,7 +17,7 @@ export const LinkCard = forwardRef<HTMLElement, Props>(function LinkCard(
   { link, index = 0, showCollection = true },
   ref,
 ) {
-  const { collectionById, toggleFavorite } = useStore();
+  const { collectionById, toggleFavorite, canEdit } = useStore();
   const { openActions, showToast } = useUI();
   const col = collectionById(link.collection);
   const domain = domainOf(link.url);
@@ -64,18 +64,20 @@ export const LinkCard = forwardRef<HTMLElement, Props>(function LinkCard(
         >
           <Copy />
         </button>
-        <motion.button
-          whileTap={{ scale: 0.8 }}
-          className={`icon-btn plain ${link.favorite ? 'fav-on' : ''}`}
-          aria-label={link.favorite ? 'Remover dos salvos' : 'Salvar'}
-          aria-pressed={!!link.favorite}
-          onClick={() => {
-            toggleFavorite(link.id);
-            showToast(link.favorite ? 'Removido dos salvos' : 'Salvo nos favoritos');
-          }}
-        >
-          <Bookmark />
-        </motion.button>
+        {canEdit && (
+          <motion.button
+            whileTap={{ scale: 0.8 }}
+            className={`icon-btn plain ${link.favorite ? 'fav-on' : ''}`}
+            aria-label={link.favorite ? 'Remover dos salvos' : 'Salvar'}
+            aria-pressed={!!link.favorite}
+            onClick={() => {
+              toggleFavorite(link.id);
+              showToast(link.favorite ? 'Removido dos salvos' : 'Salvo nos favoritos');
+            }}
+          >
+            <Bookmark />
+          </motion.button>
+        )}
         <button className="icon-btn plain" aria-label="Mais ações" onClick={() => openActions(link)}>
           <MoreHorizontal />
         </button>

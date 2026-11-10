@@ -9,7 +9,7 @@ import { Empty, SearchBar } from '../components/primitives';
 import { CollectionChips, LinkGrid } from '../components/LinkList';
 
 export function Explore() {
-  const { links, collections, collectionById } = useStore();
+  const { links, collections, collectionById, canEdit } = useStore();
   const { openCollection, openLink } = useUI();
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
@@ -49,7 +49,7 @@ export function Explore() {
         </div>
         <SearchBar value={q} onChange={(v) => set('q', v)} placeholder="Buscar links ou #tags…" shortcut />
         <div style={{ marginTop: 12 }}>
-          <CollectionChips value={active} onChange={(id) => set('c', id)} onAdd={() => openCollection()} counts={counts} />
+          <CollectionChips value={active} onChange={(id) => set('c', id)} onAdd={canEdit ? () => openCollection() : undefined} counts={counts} />
         </div>
         <LinkGrid
           links={visible}
@@ -66,9 +66,9 @@ export function Explore() {
               <Empty
                 icon={<Link2 />}
                 title="Coleção vazia"
-                text="Adicione o primeiro link desta lista."
+                text={canEdit ? 'Adicione o primeiro link desta lista.' : 'Ainda não há links nesta lista.'}
                 action={
-                  <button className="btn btn-primary" onClick={() => openLink({ collectionId: active === 'all' ? undefined : active })}>
+                  canEdit && <button className="btn btn-primary" onClick={() => openLink({ collectionId: active === 'all' ? undefined : active })}>
                     Adicionar link
                   </button>
                 }

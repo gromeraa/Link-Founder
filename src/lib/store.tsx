@@ -7,7 +7,7 @@ import type { Collection, Library, LinkItem, SortMode, ThemeMode } from './types
  * Como os dados funcionam
  * -----------------------
  * Os links ficam num banco (Upstash Redis) acessado pela API em /api, hospedada na Vercel.
- * Todos que têm o código de acesso veem e editam a mesma biblioteca.
+ * Qualquer pessoa com o link vê a biblioteca; só quem tem o código de acesso edita.
  * Cada aparelho guarda uma cópia (cache) para abrir instantaneamente, e confere novidades
  * a cada 30 s e sempre que o app volta para a tela.
  */
@@ -36,7 +36,7 @@ const write = (k: string, v: unknown) => {
   }
 };
 
-export type Status = 'loading' | 'locked' | 'ready' | 'error';
+export type Status = 'loading' | 'ready' | 'error';
 
 interface Prefs {
   theme: ThemeMode;
@@ -48,6 +48,7 @@ const EMPTY: Library = { collections: [], links: [] };
 interface Store {
   status: Status;
   bootError: string;
+  canEdit: boolean;
   collections: Collection[];
   links: LinkItem[];
   prefs: Prefs;
@@ -80,7 +81,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   if (savedCode) setAccessCode(savedCode);
 
   const [lib, setLib] = useState<Library>(cached?.lib ?? EMPTY);
-  const [status, setStatus] = useState<Status>(cached && savedCode ? 'ready' : 'loading');
+  const [status, setStatus] = useState<Status>(cached ? 'ready' : 'loading');
+  const [canEdit, setCanEdit] = useState(!!savedCode);
   const [bootError, setBootError] = useState('');
   const [prefs, setPrefsState] = useState<Prefs>(() => ({ ...DEFAULT_PREFS, ...read(KEY.prefs, {}) }));
   const [userName, setUserNameState] = useState(() => read(KEY.name, ''));
@@ -90,6 +92,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const libRef = useRef(lib);
   libRef.current = lib;
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
   const version = useRef(cached?.version ?? 0);
   const pendingWrites = useRef(0);
 
@@ -99,10 +103,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     write(KEY.cache, { lib: next, version: version.current });
   }, []);
 
+  /** Volta a ser só visitante (código apagado deste aparelho). */
   const lock = useCallback(() => {
     setAccessCode('');
     write(KEY.code, undefined);
-    setStatus('locked');
+    setCanEdit(false);
   }, []);
 
   /** Busca a biblioteca no servidor (só baixa tudo se algo mudou). */
@@ -113,12 +118,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const res = await api.library(version.current || undefined);
       if (pendingWrites.current > 0) return;
       if (!('unchanged' in res)) commit({ collections: res.collections, links: res.links }, res.version);
+      if (!res.canEdit && read(KEY.code, '')) {
+        lock();
+        setSyncError('O código de acesso mudou. Entre de novo para editar.');
+      } else setCanEdit(res.canEdit);
       setStatus('ready');
       setLastSync(Date.now());
     } catch (e) {
       const err = e as ApiError;
-      if (err.status === 401) lock();
-      else if (!libRef.current.collections.length) {
+      if (!libRef.current.collections.length) {
         setBootError(err.message);
         setStatus('error');
       }
@@ -144,6 +152,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   /** Aplica a mudança na hora (otimista) e envia ao servidor; se falhar, desfaz. */
   const mutate = useCallback(
     async (apply: (l: Library) => Library, send: () => Promise<unknown>) => {
+      if (!canEditRef.current) {
+        setSyncError('Entre com o código de acesso para editar.');
+        return;
+      }
       const before = libRef.current;
       commit(apply(before));
       pendingWrites.current++;
@@ -154,8 +166,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         const err = e as ApiError;
         commit(before);
-        if (err.status === 401) lock();
-        setSyncError(`Não foi possível salvar: ${err.message}`);
+        if (err.status === 401) {
+          lock();
+          setSyncError('Só quem tem o código de acesso pode editar.');
+        } else setSyncError(`Não foi possível salvar: ${err.message}`);
       } finally {
         pendingWrites.current--;
         setSyncing(false);
@@ -181,6 +195,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const store: Store = {
     status,
     bootError,
+    canEdit,
     collections,
     links,
     prefs,
@@ -195,23 +210,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         const res = await api.library();
         if ('unchanged' in res) throw new ApiError('Resposta inesperada', 500);
+        if (!res.canEdit) throw new ApiError('Código de acesso incorreto.', 401);
         write(KEY.code, code.trim());
         write(KEY.name, name.trim());
         setUserNameState(name.trim());
         commit({ collections: res.collections, links: res.links }, res.version);
         setLastSync(Date.now());
-        setStatus('ready');
+        setCanEdit(true);
       } catch (e) {
         setAccessCode('');
         throw e;
       }
     },
-    logout: () => {
-      write(KEY.cache, undefined);
-      version.current = 0;
-      setLib(EMPTY);
-      lock();
-    },
+    logout: () => lock(),
     setUserName: (name) => {
       setUserNameState(name);
       write(KEY.name, name.trim());

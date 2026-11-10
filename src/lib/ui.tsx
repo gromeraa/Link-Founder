@@ -6,6 +6,7 @@ type SheetState =
   | { kind: 'link'; link?: LinkItem; collectionId?: string }
   | { kind: 'collection'; collection?: Collection }
   | { kind: 'actions'; link: LinkItem }
+  | { kind: 'login' }
   | { kind: 'collectionActions'; collection: Collection }
   | {
       kind: 'confirm';
@@ -20,6 +21,7 @@ interface UI {
   openLink: (opts?: { link?: LinkItem; collectionId?: string }) => void;
   openCollection: (collection?: Collection) => void;
   openActions: (link: LinkItem) => void;
+  openLogin: () => void;
   openCollectionActions: (collection: Collection) => void;
   confirm: (opts: { title: string; message: string; confirmLabel: string; onConfirm: () => void }) => void;
   close: () => void;
@@ -45,6 +47,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
     openLink: (opts) => setSheet({ kind: 'link', ...opts }),
     openCollection: (collection) => setSheet({ kind: 'collection', collection }),
     openActions: (link) => setSheet({ kind: 'actions', link }),
+    openLogin: () => setSheet({ kind: 'login' }),
     openCollectionActions: (collection) => setSheet({ kind: 'collectionActions', collection }),
     confirm: (opts) => setSheet({ kind: 'confirm', ...opts }),
     close: () => setSheet({ kind: 'none' }),

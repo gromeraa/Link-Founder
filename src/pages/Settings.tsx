@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Bookmark, ChevronRight, Cloud, Copy, Download, FolderClosed, Link2, LogOut, Palette, RefreshCw, Upload, User,
+  Bookmark, ChevronRight, Cloud, KeyRound, Copy, Download, FolderClosed, Link2, LogOut, Palette, RefreshCw, Upload, User,
 } from 'lucide-react';
 import { APP_NAME } from '../lib/config';
 import { useStore } from '../lib/store';
@@ -50,13 +50,13 @@ function Group({ title, children, note, delay = 0 }: { title: string; children: 
 
 export function Settings() {
   const store = useStore();
-  const { prefs, setPrefs, links, collections, syncing, lastSync, refresh, userName, setUserName, logout } = store;
+  const { prefs, setPrefs, links, collections, syncing, lastSync, refresh, userName, setUserName, logout, canEdit } = store;
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 10_000);
     return () => window.clearInterval(id);
   }, []);
-  const { showToast, confirm } = useUI();
+  const { showToast, confirm, openLogin } = useUI();
   const fileRef = useRef<HTMLInputElement>(null);
   const json = () => JSON.stringify(store.exportLibrary(), null, 2) + '\n';
 
@@ -137,10 +137,27 @@ export function Settings() {
           </div>
 
           <div>
-            <Group
-              title="Compartilhamento"
+            {!canEdit && (
+              <Group
+                title="Edição"
+                delay={0.1}
+                note="Qualquer pessoa com o link pode ver. Só quem tem o código de acesso adiciona, edita e apaga."
+              >
+                <button className="row" onClick={() => openLogin()}>
+                  <span className="row-icon" data-color="blue"><KeyRound /></span>
+                  <div className="row-text">
+                    <div className="row-title">Entrar para editar</div>
+                    <div className="row-sub">Use o código de acesso</div>
+                  </div>
+                  <ChevronRight className="row-chevron" />
+                </button>
+              </Group>
+            )}
+
+            {canEdit && <Group
+              title="Modo edição"
               delay={0.1}
-              note="Quem tem o código de acesso vê e edita os mesmos links. As mudanças aparecem nos outros aparelhos em até 30 segundos."
+              note="Qualquer pessoa com o link vê os links; só quem tem o código edita. As mudanças aparecem nos outros aparelhos em até 30 segundos."
             >
               <div className="row">
                 <span className="row-icon" data-color={syncing ? 'blue' : 'green'}>
@@ -173,19 +190,19 @@ export function Settings() {
                 className="row danger"
                 onClick={() =>
                   confirm({
-                    title: 'Sair deste aparelho?',
-                    message: 'Os links continuam salvos. Para entrar de novo, use o código de acesso.',
+                    title: 'Sair do modo edição?',
+                    message: 'Neste aparelho você continua vendo os links, mas para editar vai precisar do código de novo.',
                     confirmLabel: 'Sair',
                     onConfirm: logout,
                   })
                 }
               >
                 <span className="row-icon" data-color="red"><LogOut /></span>
-                <div className="row-text"><div className="row-title">Sair deste aparelho</div></div>
+                <div className="row-text"><div className="row-title">Sair do modo edição</div></div>
               </button>
-            </Group>
+            </Group>}
 
-            <Group title="Backup" delay={0.15}>
+            {canEdit && <Group title="Backup" delay={0.15}>
               <button className="row" onClick={() => { download(`link-founder-${new Date().toISOString().slice(0, 10)}.json`, json()); showToast('Backup baixado'); }}>
                 <span className="row-icon" data-color="blue"><Download /></span>
                 <div className="row-text">
@@ -208,7 +225,7 @@ export function Settings() {
                 <ChevronRight className="row-chevron" />
               </button>
               <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => onImport(e.target.files?.[0])} />
-            </Group>
+            </Group>}
           </div>
         </div>
 

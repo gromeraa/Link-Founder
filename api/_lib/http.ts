@@ -11,27 +11,37 @@ export const json = (data: unknown, status = 200) =>
 const digest = (s: string) => createHash('sha256').update(s).digest();
 
 /**
- * Código de acesso compartilhado (variável ACCESS_CODE na Vercel).
- * O site manda o código no cabeçalho Authorization: Bearer <código>.
+ * Código de acesso de quem pode editar (variável ACCESS_CODE na Vercel).
+ * Ler é público; criar, editar e apagar exige o código no cabeçalho
+ * Authorization: Bearer <código>.
  */
-export async function authorize(req: Request): Promise<Response | null> {
+export function canEdit(req: Request): boolean {
   const code = process.env.ACCESS_CODE;
-  if (!code) {
-    if (process.env.VERCEL) return json({ error: 'Defina a variável ACCESS_CODE no painel da Vercel.' }, 500);
-    return null; // desenvolvimento local: liberado
-  }
+  if (!code) return !process.env.VERCEL; // desenvolvimento local sem código: liberado
   const sent = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (sent && timingSafeEqual(digest(sent), digest(code))) return null;
+  return !!sent && timingSafeEqual(digest(sent), digest(code));
+}
+
+async function authorize(req: Request): Promise<Response | null> {
+  if (!process.env.ACCESS_CODE && process.env.VERCEL) {
+    return json({ error: 'Defina a variável ACCESS_CODE no painel da Vercel.' }, 500);
+  }
+  if (canEdit(req)) return null;
   await new Promise((r) => setTimeout(r, 400)); // freia tentativas de adivinhação
   return json({ error: 'Código de acesso incorreto.' }, 401);
 }
 
-/** Envolve um handler: autenticação + erros padronizados. */
-export function route(fn: (req: Request) => Promise<Response>) {
+/**
+ * Envolve um handler com erros padronizados.
+ * Por padrão exige o código (escrita); `{ public: true }` libera a leitura para qualquer pessoa.
+ */
+export function route(fn: (req: Request) => Promise<Response>, opts: { public?: boolean } = {}) {
   return async (req: Request) => {
     try {
-      const denied = await authorize(req);
-      if (denied) return denied;
+      if (!opts.public) {
+        const denied = await authorize(req);
+        if (denied) return denied;
+      }
       return await fn(req);
     } catch (e) {
       if (e instanceof BadRequest) return json({ error: e.message }, 400);

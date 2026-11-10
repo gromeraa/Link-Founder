@@ -1,7 +1,7 @@
 # Link Founder 🔖
 
 Diretório de links **compartilhado** organizado em coleções (filtros), com busca, marcadores, favoritos e ordenação.
-Quem tem o **código de acesso** vê e edita os mesmos links, de qualquer aparelho.
+**Qualquer pessoa com o link pode ver** e navegar pelos links; **só quem tem o código de acesso** cria, edita e apaga links e categorias.
 Visual Apple HIG: branco, azul e cinza-claro, glassmorphism e animações. Pensado primeiro para o celular.
 
 **Stack (tudo grátis):**
@@ -36,13 +36,14 @@ A Vercel cria sozinha as variáveis de conexão (`KV_REST_API_URL` / `KV_REST_AP
 | --- | --- |
 | `ACCESS_CODE` | uma frase que só vocês dois saibam, ex.: `girassol-azul-2026` |
 
-Use algo comprido: é a única proteção dos links.
+Use algo comprido: é ele que impede outras pessoas de editar.
 
 ### 5. Publicar de novo
 **Deployments → ⋯ → Redeploy**. Pronto!
 
-### 6. Nos celulares
-Abra o site, digite **seu nome** e o **código**. Ele fica salvo, então só é preciso digitar uma vez.
+### 6. Nos celulares de vocês
+Abra o site → **Ajustes → Entrar para editar** → digite **seu nome** e o **código**. Ele fica salvo, então só é preciso digitar uma vez.
+Visitantes não veem botões de adicionar, editar ou apagar, e o servidor recusa qualquer alteração sem o código.
 Dica: no Safari use **Compartilhar → Adicionar à Tela de Início** (no Android, menu **⋮ → Instalar app**). O Link Founder abre como um app.
 
 No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/seed.ts`. Edite ou apague à vontade pelo próprio site.
@@ -51,15 +52,24 @@ No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/se
 
 ## Como funciona o compartilhamento
 
+| | Visitante (só o link) | Vocês (com o código) |
+| --- | --- | --- |
+| Ver, buscar, filtrar e abrir links | ✅ | ✅ |
+| Copiar e compartilhar links | ✅ | ✅ |
+| Adicionar, editar, mover e apagar links | ❌ | ✅ |
+| Criar, editar e apagar coleções | ❌ | ✅ |
+| Marcar como Salvo | ❌ | ✅ |
+| Backup e restauração | ❌ | ✅ |
+
 - Tudo que um de vocês adiciona, edita, move ou apaga vai direto para o banco.
 - Os outros aparelhos conferem novidades **a cada 30 segundos** e sempre que o app volta para a tela.
 - Em **Ajustes** dá para atualizar na hora, ver quando sincronizou, mudar seu nome e sair do aparelho.
 - Cada link mostra **quem adicionou** ("Ana · Há 2 dias").
-- Os **Salvos** (favoritos) são compartilhados entre vocês.
+- Os **Salvos** (favoritos) são marcados por vocês e aparecem como destaques para todos.
 
 **Backup:** Ajustes → *Baixar backup (.json)*. Para voltar uma cópia: *Restaurar backup*, que substitui a biblioteca inteira para todos.
 
-**Trocar o código:** mude `ACCESS_CODE` na Vercel e faça Redeploy. Os aparelhos voltam para a tela de acesso.
+**Trocar o código:** mude `ACCESS_CODE` na Vercel e faça Redeploy. Os aparelhos de vocês saem do modo edição e pedem o código novo.
 
 ## Criar um novo "tipo de filtro"
 
@@ -78,14 +88,14 @@ npm install
 npm run dev        # http://localhost:5173 — a API roda junto, com dados em memória
 ```
 
-Para exigir código localmente: `ACCESS_CODE=teste npm run dev`.
+Sem `ACCESS_CODE`, todo mundo edita localmente. Para testar o modo visitante: `ACCESS_CODE=teste npm run dev`.
 Para usar o banco real: `npx vercel link && npx vercel env pull` e depois `npx vercel dev`.
 
 ## Estrutura
 
 ```
 api/                     ← Vercel Functions (rodam no servidor)
-  library.ts             ← GET biblioteca · PUT restaurar backup
+  library.ts             ← GET biblioteca (público) · PUT restaurar backup
   links.ts               ← POST salvar link · DELETE apagar
   collections.ts         ← POST salvar coleção · DELETE apagar (com seus links)
   _lib/                  ← banco (Redis/memória), código de acesso, validação, dados iniciais
