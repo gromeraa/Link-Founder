@@ -47,7 +47,7 @@ export function Explore() {
             </p>
           </div>
         </div>
-        <SearchBar value={q} onChange={(v) => set('q', v)} placeholder="Buscar links, tags ou domínios…" shortcut />
+        <SearchBar value={q} onChange={(v) => set('q', v)} placeholder="Buscar links ou #tags…" shortcut />
         <div style={{ marginTop: 12 }}>
           <CollectionChips value={active} onChange={(id) => set('c', id)} onAdd={() => openCollection()} counts={counts} />
         </div>

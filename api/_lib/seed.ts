@@ -1,5 +1,5 @@
 /**
- * Dados iniciais da Estante.
+ * Dados iniciais do Link Founder.
  * São gravados no banco apenas UMA vez, no primeiro acesso, quando ele ainda está vazio.
  * Depois disso, tudo é editado pelo próprio site.
  */

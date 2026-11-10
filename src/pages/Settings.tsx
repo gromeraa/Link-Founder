@@ -70,13 +70,13 @@ export function Settings() {
       data = null;
     }
     if (!isLibrary(data)) {
-      showToast('Arquivo inválido: escolha um backup .json da Estante', 'error');
+      showToast('Arquivo inválido: escolha um backup .json do Link Founder', 'error');
       return;
     }
     const lib = data;
     confirm({
       title: 'Restaurar backup?',
-      message: `A estante atual será trocada por ${plural(lib.links.length, 'link', 'links')} e ${plural(lib.collections.length, 'coleção', 'coleções')}, para todos que usam.`,
+      message: `A biblioteca atual será trocada por ${plural(lib.links.length, 'link', 'links')} e ${plural(lib.collections.length, 'coleção', 'coleções')}, para todos que usam.`,
       confirmLabel: 'Restaurar',
       onConfirm: async () => {
         await store.importLibrary(lib);
@@ -140,7 +140,7 @@ export function Settings() {
             <Group
               title="Compartilhamento"
               delay={0.1}
-              note="Quem tem o código de acesso vê e edita a mesma estante. As mudanças aparecem nos outros aparelhos em até 30 segundos."
+              note="Quem tem o código de acesso vê e edita os mesmos links. As mudanças aparecem nos outros aparelhos em até 30 segundos."
             >
               <div className="row">
                 <span className="row-icon" data-color={syncing ? 'blue' : 'green'}>
@@ -150,7 +150,7 @@ export function Settings() {
                   <div className="row-title">{syncing ? 'Sincronizando…' : 'Sincronizado'}</div>
                   <div className="row-sub">{lastSync ? `Atualizado ${timeAgo(lastSync, now)}` : 'Aguardando servidor'}</div>
                 </div>
-                <button className="btn btn-secondary btn-sm" onClick={async () => { await refresh(); showToast('Estante atualizada'); }}>
+                <button className="btn btn-secondary btn-sm" onClick={async () => { await refresh(); showToast('Links atualizados'); }}>
                   <RefreshCw /> Atualizar
                 </button>
               </div>
@@ -186,7 +186,7 @@ export function Settings() {
             </Group>
 
             <Group title="Backup" delay={0.15}>
-              <button className="row" onClick={() => { download(`estante-${new Date().toISOString().slice(0, 10)}.json`, json()); showToast('Backup baixado'); }}>
+              <button className="row" onClick={() => { download(`link-founder-${new Date().toISOString().slice(0, 10)}.json`, json()); showToast('Backup baixado'); }}>
                 <span className="row-icon" data-color="blue"><Download /></span>
                 <div className="row-text">
                   <div className="row-title">Baixar backup (.json)</div>
@@ -203,7 +203,7 @@ export function Settings() {
                 <span className="row-icon" data-color="orange"><Upload /></span>
                 <div className="row-text">
                   <div className="row-title">Restaurar backup</div>
-                  <div className="row-sub">Substitui a estante inteira, para todos</div>
+                  <div className="row-sub">Substitui a biblioteca inteira, para todos</div>
                 </div>
                 <ChevronRight className="row-chevron" />
               </button>

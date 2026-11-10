@@ -1,7 +1,7 @@
-# Estante 🔖
+# Link Founder 🔖
 
 Diretório de links **compartilhado** organizado em coleções (filtros), com busca, marcadores, favoritos e ordenação.
-Quem tem o **código de acesso** vê e edita a mesma estante, de qualquer aparelho.
+Quem tem o **código de acesso** vê e edita os mesmos links, de qualquer aparelho.
 Visual Apple HIG: branco, azul e cinza-claro, glassmorphism e animações. Pensado primeiro para o celular.
 
 **Stack (tudo grátis):**
@@ -17,7 +17,7 @@ Visual Apple HIG: branco, azul e cinza-claro, glassmorphism e animações. Pensa
 ### 1. Código no GitHub
 ```bash
 npm install
-git remote add origin https://github.com/SEU_USUARIO/estante.git
+git remote add origin https://github.com/gromeraa/Link-Founder.git
 git push -u origin main
 ```
 
@@ -36,14 +36,14 @@ A Vercel cria sozinha as variáveis de conexão (`KV_REST_API_URL` / `KV_REST_AP
 | --- | --- |
 | `ACCESS_CODE` | uma frase que só vocês dois saibam, ex.: `girassol-azul-2026` |
 
-Use algo comprido: é a única proteção da estante.
+Use algo comprido: é a única proteção dos links.
 
 ### 5. Publicar de novo
 **Deployments → ⋯ → Redeploy**. Pronto!
 
 ### 6. Nos celulares
 Abra o site, digite **seu nome** e o **código**. Ele fica salvo, então só é preciso digitar uma vez.
-Dica: no Safari use **Compartilhar → Adicionar à Tela de Início** (no Android, menu **⋮ → Instalar app**). A Estante abre como um app.
+Dica: no Safari use **Compartilhar → Adicionar à Tela de Início** (no Android, menu **⋮ → Instalar app**). O Link Founder abre como um app.
 
 No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/seed.ts`. Edite ou apague à vontade pelo próprio site.
 
@@ -57,7 +57,7 @@ No primeiro acesso o banco é preenchido com os links de exemplo de `api/_lib/se
 - Cada link mostra **quem adicionou** ("Ana · Há 2 dias").
 - Os **Salvos** (favoritos) são compartilhados entre vocês.
 
-**Backup:** Ajustes → *Baixar backup (.json)*. Para voltar uma cópia: *Restaurar backup*, que substitui a estante inteira para todos.
+**Backup:** Ajustes → *Baixar backup (.json)*. Para voltar uma cópia: *Restaurar backup*, que substitui a biblioteca inteira para todos.
 
 **Trocar o código:** mude `ACCESS_CODE` na Vercel e faça Redeploy. Os aparelhos voltam para a tela de acesso.
 

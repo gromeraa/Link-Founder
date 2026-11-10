@@ -18,10 +18,10 @@ export interface DB {
 }
 
 const K = {
-  links: 'estante:links',
-  cols: 'estante:collections',
-  ver: 'estante:version',
-  seeded: 'estante:seeded',
+  links: 'linkfounder:links',
+  cols: 'linkfounder:collections',
+  ver: 'linkfounder:version',
+  seeded: 'linkfounder:seeded',
 };
 
 const byOrder = (a: Collection, b: Collection) => (a.order ?? 0) - (b.order ?? 0);
